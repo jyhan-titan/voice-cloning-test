@@ -6,13 +6,13 @@ function getApiKey() {
   return process.env.FISH_AUDIO_API_KEY;
 }
 
-export async function GET(_req: NextRequest, context: { params: { id: string } }) {
+export async function GET(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
   const apiKey = getApiKey();
   if (!apiKey) {
     return NextResponse.json({ error: 'Missing FISH_AUDIO_API_KEY' }, { status: 500 });
   }
 
-  const { id } = context.params;
+  const { id } = await context.params;
   const response = await fetch(`https://api.fish.audio/model/${encodeURIComponent(id)}`, {
     method: 'GET',
     headers: {
@@ -28,13 +28,13 @@ export async function GET(_req: NextRequest, context: { params: { id: string } }
   return new NextResponse(text, { status: 200, headers: { 'Content-Type': 'application/json' } });
 }
 
-export async function PATCH(req: NextRequest, context: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   const apiKey = getApiKey();
   if (!apiKey) {
     return NextResponse.json({ error: 'Missing FISH_AUDIO_API_KEY' }, { status: 500 });
   }
 
-  const { id } = context.params;
+  const { id } = await context.params;
   const contentType = req.headers.get('content-type') || '';
 
   const isMultipart = contentType.toLowerCase().includes('multipart/form-data');

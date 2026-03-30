@@ -5,9 +5,10 @@ import type { TiptapNode } from '@/src/utils/voice';
 
 export const runtime = 'nodejs';
 
-export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
+export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const item = getContentByIdSync(ctx.params.id);
+    const { id } = await ctx.params;
+    const item = getContentByIdSync(id);
     return NextResponse.json(item);
   } catch (e) {
     return NextResponse.json(
@@ -17,13 +18,14 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
   }
 }
 
-export async function PATCH(req: NextRequest, ctx: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await ctx.params;
     const body = await req.json();
 
     const patch: { title?: string; nodes?: unknown } = body ?? {};
     const nodes = Array.isArray(patch.nodes) ? (patch.nodes as TiptapNode[]) : undefined;
-    const next = updateContentByIdSync(ctx.params.id, {
+    const next = updateContentByIdSync(id, {
       ...(typeof patch.title === 'string' ? { title: patch.title } : {}),
       ...(nodes ? { nodes } : {}),
     });
