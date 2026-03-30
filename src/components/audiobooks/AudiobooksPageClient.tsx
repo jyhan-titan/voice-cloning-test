@@ -48,7 +48,7 @@ export function AudiobooksPageClient() {
 
   return (
     <div className="min-h-full px-8 py-10 font-sans">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900">오디오북</h1>
           <p className="text-sm text-zinc-500 mt-2">생성된 오디오북을 관리합니다.</p>
@@ -56,7 +56,7 @@ export function AudiobooksPageClient() {
         <button
           type="button"
           onClick={() => setCreateOpen(true)}
-          className="px-5 py-2.5 rounded-2xl bg-zinc-900 text-white text-sm font-bold hover:bg-zinc-800"
+          className="px-5 py-2.5 rounded-2xl bg-zinc-800 text-white text-sm font-bold hover:bg-zinc-800"
         >
           오디오북 만들기
         </button>

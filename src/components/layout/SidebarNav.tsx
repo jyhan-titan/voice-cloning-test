@@ -10,7 +10,7 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/', label: '홈' },
-  { href: '/voices', label: '보이스' },
+  { href: '/voices', label: '보이스 관리' },
   { href: '/contents', label: '콘텐츠 관리' },
   { href: '/audiobooks', label: '오디오북' },
 ];
@@ -34,7 +34,7 @@ export function SidebarNav() {
             className={
               active
                 ? 'block rounded-xl px-4 py-3 text-sm font-semibold text-zinc-900 bg-zinc-50'
-                : 'block rounded-xl px-4 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-50'
+                : 'block rounded-xl px-4 py-3 text-sm font-semibold text-zinc-200 hover:bg-zinc-700'
             }
             aria-current={active ? 'page' : undefined}
           >

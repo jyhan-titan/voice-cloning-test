@@ -5,7 +5,12 @@ import { useRouter } from 'next/navigation';
 // import { extractTextFromNode, TiptapNode } from '@/utils/voice'; // Tiptap 유틸 (사용자 데이터용)
 
 // --- 더미 스크립트 (녹음 중 보여줄 내용) ---
-const RECORDING_SCRIPT = "Here, you can enjoy the boundless scenery of the grasslands and feel the passion and excitement of galloping horses. Let's step into this passionate place together!";
+const RECORDING_SCRIPTS = [
+  '안녕하세요. 지금 저는 보이스 클로닝을 위한 샘플 음성을 녹음하고 있습니다. 또박또박, 자연스럽게 읽어주세요.',
+  '오늘은 맑은 하늘 아래 산책하기 좋은 날입니다. 바람 소리와 나뭇잎 흔들리는 소리가 마음을 편안하게 해줍니다.',
+  '가격은 오천 원이고, 결제는 카드로 부탁드립니다. 영수증은 필요 없고 포인트 적립만 해주세요.',
+  '시간은 금방 지나가지만, 중요한 건 지금 이 순간입니다. 천천히 숨을 쉬고, 한 문장씩 편하게 읽어보세요.',
+] as const;
 
 // --- 유틸 함수: 초(second)를 분:초(MM:SS) 형식으로 변환 ---
 const formatDuration = (seconds: number): string => {
@@ -55,12 +60,33 @@ export default function VoiceCloningPage() {
   const [agree, setAgree] = useState(false);
   const [showAllQualityTags, setShowAllQualityTags] = useState(false);
   const [coverFile, setCoverFile] = useState<File | null>(null);
-  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>('/microphone.jpg');
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>('/default_audio_image.png');
   const [coverPreviewIsObjectUrl, setCoverPreviewIsObjectUrl] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [playingItemId, setPlayingItemId] = useState<string | null>(null);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
+
+  const [recordingScript, setRecordingScript] = useState<(typeof RECORDING_SCRIPTS)[number]>(() => {
+    const idx = Math.floor(Math.random() * RECORDING_SCRIPTS.length);
+    return RECORDING_SCRIPTS[idx];
+  });
+
+  const refreshRecordingScript = useCallback(() => {
+    if (RECORDING_SCRIPTS.length <= 1) return;
+    setRecordingScript((prev) => {
+      let next = prev;
+      for (let i = 0; i < 10; i += 1) {
+        const idx = Math.floor(Math.random() * RECORDING_SCRIPTS.length);
+        const candidate = RECORDING_SCRIPTS[idx];
+        if (candidate !== prev) {
+          next = candidate;
+          break;
+        }
+      }
+      return next;
+    });
+  }, []);
 
   const presetTags = useMemo(
     () => ({
@@ -365,12 +391,12 @@ export default function VoiceCloningPage() {
                   setAgree(false);
                   setCoverFile(null);
                   if (coverPreviewUrl && coverPreviewIsObjectUrl) URL.revokeObjectURL(coverPreviewUrl);
-                  setCoverPreviewUrl('/microphone.jpg');
+                  setCoverPreviewUrl('/default_audio_image.png');
                   setCoverPreviewIsObjectUrl(false);
                   setSaveError(null);
                   router.push('/voices?tab=custom');
                 }}
-                className="px-5 py-2.5 rounded-2xl bg-zinc-900 text-white text-sm font-bold hover:bg-zinc-800"
+                className="px-5 py-2.5 rounded-2xl bg-zinc-800 text-white text-sm font-bold hover:bg-zinc-800"
               >
                 확인
               </button>
@@ -379,10 +405,10 @@ export default function VoiceCloningPage() {
         </div>
       )}
       <header className="mb-10 flex items-center gap-3">
-        <span className="text-2xl">🎙️</span>
+        <span className="text-5xl">🎙️</span>
         <div className="flex flex-col">
-          <h1 className="text-xl font-bold text-gray-900">보이스 클로닝</h1>
-          <p className="text-sm text-gray-500 mt-1">당신의 목소리를 들려주세요.</p>
+          <h1 className="text-xl font-bold text-zinc-900">보이스 클로닝</h1>
+          <p className="text-sm text-zinc-500 mt-1">당신의 목소리를 들려주세요.</p>
         </div>
       </header>
 
@@ -393,12 +419,12 @@ export default function VoiceCloningPage() {
               type="button"
               onClick={() => setStep(1)}
               className={`w-full flex items-center gap-3 text-left ${
-                step === 1 ? 'text-gray-900 font-semibold' : 'text-gray-500 hover:text-gray-800'
+                step === 1 ? 'text-zinc-900 font-semibold' : 'text-zinc-500 hover:text-zinc-800 cursor-pointer'
               }`}
             >
               <div
                 className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                  step === 1 ? 'bg-gray-900 text-white' : 'border border-gray-200'
+                  step === 1 ? 'bg-zinc-900 text-white' : 'border border-zinc-200'
                 }`}
               >
                 1
@@ -410,12 +436,12 @@ export default function VoiceCloningPage() {
               onClick={() => setStep(2)}
               disabled={isDisabled}
               className={`w-full flex items-center gap-3 text-left ${
-                step === 2 ? 'text-gray-900 font-semibold' : 'text-gray-500 hover:text-gray-800'
+                step === 2 ? 'text-zinc-900 font-semibold' : isDisabled ? 'text-zinc-400 cursor-not-allowed' : 'text-zinc-500 hover:text-zinc-800 cursor-pointer'
               }`}
             >
               <div
                 className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                  step === 2 ? 'bg-gray-900 text-white' : 'border border-gray-200'
+                  step === 2 ? 'bg-zinc-900 text-white' : 'border border-zinc-200'
                 }`}
               >
                 2
@@ -428,44 +454,69 @@ export default function VoiceCloningPage() {
         <main className="col-span-12 md:col-span-9">
           {step === 1 ? (
             <>
-              <section className="bg-white w-full rounded-3xl shadow-sm border border-gray-100 relative overflow-hidden transition-all duration-300 flex flex-col">
+              <section className="bg-white w-full rounded-3xl shadow-sm border border-zinc-100 relative overflow-hidden transition-all duration-300 flex flex-col">
                 {isRecording ? (
                   <div className="w-full flex-1 p-8 md:p-12 flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-300 min-h-[400px]">
                     <div className="flex items-center gap-3 mb-4">
-                      <span className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
-                      <span className="text-4xl font-mono font-bold text-gray-950 tracking-tight">
+                      <span className="relative inline-flex h-2.5 w-2.5">
+                        <span className="absolute inline-flex h-full w-full rounded-full bg-red-500/60 animate-ping" />
+                        <span className="relative inline-flex h-full w-full rounded-full bg-red-500 animate-pulse" />
+                      </span>
+                      <span className="text-4xl font-mono font-bold text-zinc-950 tracking-tight">
                         {formatDuration(recordingTime)}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-400 mb-6 font-medium uppercase tracking-widest">Recording</p>
+                    <p className="text-xs text-zinc-400 mb-6 font-medium uppercase tracking-widest">Recording</p>
 
-                    <div className="w-full max-w-2xl bg-[#F3F4F6] p-6 md:p-10 rounded-2xl border border-gray-100 text-sm md:text-base text-gray-700 leading-relaxed mb-10 italic shadow-inner text-center min-h-[120px] flex items-center justify-center">
-                      {RECORDING_SCRIPT}
+                    <div className="flex flex-col w-full max-w-2xl bg-[#F3F4F6] p-6 md:p-10 rounded-2xl border border-zinc-100 text-sm md:text-base text-zinc-700 leading-relaxed mb-10 italic shadow-inner text-center min-h-[120px] flex items-center justify-center">
+                    <button
+                      type="button"
+                      onClick={refreshRecordingScript}
+                      className="mb-3 inline-flex items-center gap-2 cursor-pointer"
+                      aria-label="샘플 문장 새로고침"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="h-4 w-4"
+                        aria-hidden="true"
+                      >
+                        <path d="M21 12a9 9 0 0 1-15 6.7" />
+                        <path d="M3 12a9 9 0 0 1 15-6.7" />
+                        <path d="M21 3v7h-7" />
+                        <path d="M3 21v-7h7" />
+                      </svg>
+                    </button>
+                    {recordingScript}
                     </div>
+
 
                     <button
                       onClick={stopRecording}
-                      className="flex items-center gap-3 bg-[#EF4444] text-white px-12 py-4 rounded-2xl font-bold hover:bg-red-600 transition-all shadow-lg shadow-red-100 active:scale-95 mb-4 shrink-0"
+                      className="flex items-center gap-3 bg-[#EF4444] text-white px-12 py-4 rounded-2xl font-bold hover:bg-red-600 transition-all shadow-lg shadow-red-100 active:scale-95 mb-4 shrink-0 cursor-pointer"
                     >
-                      <span className="text-[10px] bg-white text-red-500 p-1 rounded-sm">⬛</span>
                       녹음 중지
                     </button>
                   </div>
                 ) : (
                   <div className="w-full flex-1 p-12 flex flex-col items-center text-center min-h-[400px] justify-center">
-                    <h2 className="text-xl font-bold text-gray-800">오디오 파일을 추가하거나 삭제하세요</h2>
-                    <p className="text-sm text-gray-500 mt-4 leading-relaxed max-w-xl">
+                    <h2 className="text-xl font-bold text-zinc-800">오디오 파일을 추가하거나 삭제하세요</h2>
+                    <p className="text-sm text-zinc-500 mt-4 leading-relaxed max-w-xl">
                       여기에 오디오 파일을 드래그 앤 드롭하거나 클릭하여 업로드 또는 녹음하세요.
                       <br />
                       MP3, WAV, M4A, FLAC, MP4, MOV, WEBM, WEBA, OPUS, MID - MAX 32MB
                     </p>
 
                     <div className="w-full max-w-xl mt-8 text-left">
-                      <label className="text-sm font-semibold text-gray-700">이름</label>
+                      <label className="text-sm font-semibold text-zinc-700">이름</label>
                       <input
                         value={modelTitle}
                         onChange={(e) => setModelTitle(e.target.value)}
-                        className="w-full mt-2 rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-gray-900/10"
+                        className="w-full mt-2 rounded-2xl border border-zinc-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-zinc-900/10"
                         placeholder="예: 표준 한국어 남성"
                       />
                     </div>
@@ -487,27 +538,42 @@ export default function VoiceCloningPage() {
 
                       <label
                         htmlFor="file-upload"
-                        className="flex items-center gap-2 bg-[#F3F4F6] text-gray-800 px-6 py-3 rounded-2xl font-semibold cursor-pointer hover:bg-gray-200 transition"
+                        className="flex items-center gap-2 bg-[#F3F4F6] text-zinc-800 px-5 py-2 rounded-xl font-semibold cursor-pointer hover:bg-zinc-200 transition"
                       >
-                        <span>📤</span> 업로드
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="h-4 w-4"
+                          aria-hidden="true"
+                        >
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <path d="M17 8l-5-5-5 5" />
+                          <path d="M12 3v12" />
+                        </svg>
+                        업로드
                       </label>
 
                       <button
                         onClick={startRecording}
-                        className="flex items-center gap-2 bg-[#F3F4F6] text-gray-800 px-6 py-3 rounded-2xl font-semibold hover:bg-gray-200 transition"
+                        className="flex items-center gap-2 bg-[#F3F4F6] text-zinc-800 px-5 py-2 rounded-xl font-semibold hover:bg-zinc-200 transition"
                       >
-                        <span>🎙️</span> 녹음
+                        <span className="h-2 w-2 rounded-full bg-red-500" aria-hidden="true" />
+                        녹음
                       </button>
                     </div>
                   </div>
                 )}
               </section>
 
-              <section className="mt-8 bg-white p-8 rounded-3xl shadow-sm border border-gray-100 relative">
+              <section className="mt-8 bg-white p-8 rounded-3xl shadow-sm border border-zinc-100 relative">
                 <div className="flex justify-between items-center mb-6">
                   <div className="flex flex-col">
                     <span className="text-lg font-bold">업로드됨: {totalDuration.toFixed(1)}s</span>
-                    <span className="text-xs text-gray-400 mt-1">*참고: 최소 10초, 최대 210초 권장</span>
+                    <span className="text-xs text-zinc-400 mt-1">*참고: 최소 10초, 최대 210초 권장</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs font-semibold px-3 py-1 bg-[#FFFBEB] text-[#D97706] rounded-full">
                     <span>⚠️</span> 추천 30초 ~ 90초
@@ -516,27 +582,27 @@ export default function VoiceCloningPage() {
 
                 <div className="w-full h-2.5 bg-[#E5E7EB] rounded-full overflow-hidden relative mb-6">
                   <div
-                    className="h-full bg-zinc-900 transition-all duration-300"
+                    className="h-full bg-zinc-800 transition-all duration-300"
                     style={{ width: `${Math.min((totalDuration / 210) * 100, 100)}%` }}
                   />
                 </div>
 
                 {audioList.length > 0 && (
                   <div className="mt-8 space-y-3">
-                    <h3 className="text-sm font-bold text-gray-500 mb-3">등록된 오디오 ({audioList.length}개)</h3>
+                    <h3 className="text-sm font-bold text-zinc-500 mb-3">등록된 오디오 ({audioList.length}개)</h3>
                     {audioList.map((item) => (
                       <div
                         key={item.id}
-                        className="bg-white p-4 rounded-xl border border-gray-100 flex items-center gap-4 hover:shadow-sm transition"
+                        className="bg-white p-4 rounded-xl border border-zinc-100 flex items-center gap-4 hover:shadow-sm transition"
                       >
-                        <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center text-gray-400 border border-gray-100">
+                        <div className="w-10 h-10 bg-zinc-50 rounded-lg flex items-center justify-center text-zinc-400 border border-zinc-100">
                           <span className="text-lg">📄</span>
                         </div>
                         <div className="flex-1 flex flex-col">
-                          <span className="text-sm font-semibold text-gray-800 truncate">{item.file.name}</span>
-                          <div className="flex items-center gap-2 text-xs text-gray-400 mt-1 font-mono">
+                          <span className="text-sm font-semibold text-zinc-800 truncate">{item.file.name}</span>
+                          <div className="flex items-center gap-2 text-xs text-zinc-400 mt-1 font-mono">
                             <span>{formatSize(item.size)}</span>
-                            <span className="text-gray-200">|</span>
+                            <span className="text-zinc-200">|</span>
                             <span>{formatDuration(item.duration)}</span>
                           </div>
                         </div>
@@ -548,7 +614,7 @@ export default function VoiceCloningPage() {
                             className={`w-8 h-8 rounded-full flex items-center justify-center transition ${
                               playingItemId === item.id
                                 ? 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-                                : 'bg-gray-50 text-gray-500 hover:bg-gray-100 hover:text-gray-800'
+                                : 'bg-zinc-50 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800'
                             }`}
                           >
                             {playingItemId === item.id ? '❚❚️' : '▶'}
@@ -561,7 +627,7 @@ export default function VoiceCloningPage() {
                               if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
                               setAudioList((prev) => prev.filter((a) => a.id !== item.id));
                             }}
-                            className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-red-400 hover:bg-red-50 hover:text-red-600 transition"
+                            className="w-8 h-8 rounded-full bg-zinc-50 flex items-center justify-center text-red-400 hover:bg-red-50 hover:text-red-600 transition"
                           >
                             ✕
                           </button>
@@ -572,93 +638,95 @@ export default function VoiceCloningPage() {
                 )}
               </section>
 
-              <footer className="mt-10 text-center">
+              <footer className="mt-6 text-end">
                 <button
                   onClick={goToDetailsStep}
                   disabled={isDisabled}
-                  className={`px-12 py-4 rounded-xl font-bold text-lg transition ${
+                  className={`px-5 py-2 rounded-xl font-semibold transition ${
                     isDisabled
-                      ? 'bg-[#E5E7EB] text-gray-400 cursor-not-allowed'
-                      : 'bg-zinc-900 text-white hover:bg-zinc-800 shadow-lg shadow-zinc-100 cursor-pointer'
+                      ? 'bg-[#E5E7EB] text-zinc-400 cursor-not-allowed'
+                      : 'bg-zinc-800 text-white hover:bg-zinc-800 shadow-lg shadow-zinc-100 cursor-pointer'
                   }`}
                 >
-                  Next Step
+                  다음
                 </button>
               </footer>
             </>
           ) : (
-            <section className="bg-white w-full rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8">
-              <div className="flex items-center justify-between mb-8">
-                <div className="text-sm text-gray-500">{clonedVoiceId ? `모델 ID: ${clonedVoiceId}` : ''}</div>
-                <div />
-              </div>
+            <section className="bg-white w-full rounded-3xl shadow-sm border border-zinc-100 p-6 md:p-8">
+              {clonedVoiceId && <div className="flex items-center justify-between mb-8">
+                <div className="text-sm text-zinc-500">모델 ID: {clonedVoiceId}</div>
+              </div>}
 
               <div className="space-y-8">
                 <div className="flex items-center gap-6">
                   <div className="relative">
-                    <div className="w-20 h-20 rounded-2xl bg-gray-200 overflow-hidden">
+                    <div className="w-20 h-20 rounded-2xl bg-zinc-200 overflow-hidden">
                       {coverPreviewUrl && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={coverPreviewUrl} alt="cover" className="w-full h-full object-cover" />
                       )}
                     </div>
-                    <label className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center cursor-pointer hover:bg-gray-50">
-                      <span className="text-sm">✎</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (!f) return;
-                          if (coverPreviewUrl && coverPreviewIsObjectUrl) URL.revokeObjectURL(coverPreviewUrl);
-                          setCoverFile(f);
-                          setCoverPreviewUrl(URL.createObjectURL(f));
-                          setCoverPreviewIsObjectUrl(true);
-                          e.target.value = '';
-                        }}
-                      />
-                    </label>
-                  </div>
+                    <div className="absolute -bottom-4 -right-4 flex items-center gap-1">
+                      <label className="w-8 h-8 rounded-full bg-white border border-zinc-200 flex items-center justify-center cursor-pointer hover:bg-zinc-50">
+                        <span className="text-sm">✎</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (!f) return;
+                            if (coverPreviewUrl && coverPreviewIsObjectUrl) URL.revokeObjectURL(coverPreviewUrl);
+                            setCoverFile(f);
+                            setCoverPreviewUrl(URL.createObjectURL(f));
+                            setCoverPreviewIsObjectUrl(true);
+                            e.target.value = '';
+                          }}
+                        />
+                      </label>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (coverPreviewUrl && coverPreviewIsObjectUrl) URL.revokeObjectURL(coverPreviewUrl);
-                      setCoverFile(null);
-                      setCoverPreviewUrl('/microphone.jpg');
-                      setCoverPreviewIsObjectUrl(false);
-                    }}
-                    className="text-xs font-semibold text-gray-500 hover:text-gray-900"
-                  >
-                    커버 이미지 제거
-                  </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (coverPreviewUrl && coverPreviewIsObjectUrl) URL.revokeObjectURL(coverPreviewUrl);
+                          setCoverFile(null);
+                          setCoverPreviewUrl('/default_audio_image.png');
+                          setCoverPreviewIsObjectUrl(false);
+                        }}
+                        className="w-8 h-8 rounded-full bg-white border border-zinc-200 flex items-center justify-center text-sm font-semibold text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 cursor-pointer"
+                        aria-label="커버 이미지 제거"
+                      >
+                        X
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-700">이름</label>
+                <div className="space-y-3">
+                  <label className="text-sm font-semibold text-zinc-700">이름</label>
                   <input
                     value={modelTitle}
                     onChange={(e) => setModelTitle(e.target.value)}
-                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-gray-900/10"
+                    className="w-full rounded-xl border border-zinc-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-zinc-900/10 mt-2"
                     placeholder="예: 표준 한국어 남성"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-700">설명 (선택 사항)</label>
+                  <label className="text-sm font-semibold text-zinc-700">설명 (선택 사항)</label>
                   <textarea
                     value={modelDescription}
                     onChange={(e) => setModelDescription(e.target.value)}
-                    className="w-full min-h-[110px] rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-gray-900/10"
+                    className="w-full min-h-[110px] rounded-xl border border-zinc-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-zinc-900/10 mt-2"
                     placeholder="명확하고 차분한 음색의 남성 음성입니다."
                   />
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-sm font-semibold text-gray-700">태그 (선택 사항)</label>
-                    <span className="text-xs text-gray-400">{tags.length}개</span>
+                    <label className="text-sm font-semibold text-zinc-700">태그 (선택 사항)</label>
+                    <span className="text-xs text-zinc-400">{tags.length}개</span>
                   </div>
 
                   <div className="flex gap-2">
@@ -675,7 +743,7 @@ export default function VoiceCloningPage() {
                         }
                       }}
                      
-                      className="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-gray-900/10"
+                      className="flex-1 rounded-xl border border-zinc-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-zinc-900/10"
                       placeholder="태그를 입력하고 Enter"
                     />
                     <button
@@ -686,7 +754,7 @@ export default function VoiceCloningPage() {
                           setTagInput('');
                         }
                       }}
-                      className="px-4 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800"
+                      className="px-4 rounded-xl bg-zinc-900 text-white text-sm font-semibold hover:bg-zinc-800"
                     >
                       추가
                     </button>
@@ -699,9 +767,9 @@ export default function VoiceCloningPage() {
                           key={t}
                           type="button"
                           onClick={() => removeTag(t)}
-                          className="px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-semibold hover:bg-gray-200"
+                          className="px-3 py-1 rounded-lg bg-zinc-100 text-zinc-700 text-xs font-semibold hover:bg-zinc-200 cursor-pointer"
                         >
-                          {t} ×
+                          {t} X
                         </button>
                       ))}
                     </div>
@@ -716,45 +784,46 @@ export default function VoiceCloningPage() {
                     { label: '음성 품질', values: presetTags.quality },
                   ] as const
                 ).map((group) => (
-                  <div key={group.label} className="space-y-4">
-                    <div className="text-sm font-semibold text-gray-700">{group.label}</div>
+                  <div key={group.label} className="space-y-2">
+                    <div className="text-sm font-semibold text-zinc-700">{group.label}</div>
                     <div className="flex flex-wrap gap-2">
                       {(group.label === '음성 품질' && !showAllQualityTags ? group.values.slice(0, 14) : group.values).map((t) => (
                         <button
                           key={t}
                           type="button"
                           onClick={() => toggleTag(t)}
-                          className={`px-3 py-1 rounded-full border text-xs font-semibold transition ${
+                          className={`px-3 py-1 rounded-lg border text-xs font-semibold transition cursor-pointer ${
                             tags.includes(t)
-                              ? 'bg-gray-900 text-white border-gray-900'
-                              : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                              ? 'bg-zinc-900 text-white border-zinc-900'
+                              : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50'
                           }`}
                         >
                           {t}
                         </button>
                       ))}
-                    </div>
-                    {group.label === '음성 품질' && group.values.length > 14 && (
-                      <div className="flex justify-center">
+
+                      {group.label === '음성 품질' && group.values.length > 14 && (
                         <button
                           type="button"
                           onClick={() => setShowAllQualityTags((v) => !v)}
-                          className="text-xs font-semibold text-gray-600 hover:text-gray-900"
+                          className="px-3 py-1 rounded-lg bg-white text-xs font-bold text-zinc-900 hover:bg-zinc-50 hover:text-zinc-900 cursor-pointer inline-flex items-center gap-1"
                         >
                           {showAllQualityTags ? '간략히 보기' : '전체 보기'}
+                          <span aria-hidden="true">{showAllQualityTags ? '▲' : '▼'}</span>
                         </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 ))}
 
                 <div className="space-y-3">
-                  <div className="text-sm font-semibold text-gray-700">타입</div>
+                  <div className="text-sm font-semibold text-zinc-700">타입</div>
                   <div className="flex items-center gap-6 text-sm">
                     <label className="flex items-center gap-2">
                       <input
                         type="radio"
                         name="visibility"
+                        className="accent-zinc-900"
                         checked={visibility === 'public'}
                         onChange={() => setVisibility('public')}
                       />
@@ -764,6 +833,7 @@ export default function VoiceCloningPage() {
                       <input
                         type="radio"
                         name="visibility"
+                        className="accent-zinc-900"
                         checked={visibility === 'unlist'}
                         onChange={() => setVisibility('unlist')}
                       />
@@ -773,13 +843,14 @@ export default function VoiceCloningPage() {
                       <input
                         type="radio"
                         name="visibility"
+                        className="accent-zinc-900"
                         checked={visibility === 'private'}
                         onChange={() => setVisibility('private')}
                       />
                       비공개
                     </label>
                   </div>
-                  <div className="text-xs text-gray-500 leading-relaxed">
+                  <div className="text-xs text-zinc-500 leading-relaxed">
                     {visibility === 'public'
                       ? '이 음성 모델은 발견 페이지에서 볼 수 있으며 모든 사람이 볼 수 있습니다.'
                       : visibility === 'private'
@@ -788,10 +859,10 @@ export default function VoiceCloningPage() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl bg-gray-50 border border-gray-100 p-5">
-                  <div className="text-xs text-gray-400 font-semibold mb-3">미리보기</div>
+                <div className="rounded-2xl bg-zinc-50 border border-zinc-100 p-5">
+                  <div className="text-xs text-zinc-400 font-semibold mb-3">미리보기</div>
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-gray-200 overflow-hidden">
+                    <div className="w-14 h-14 rounded-2xl bg-zinc-200 overflow-hidden">
                       {coverPreviewUrl && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={coverPreviewUrl} alt="cover" className="w-full h-full object-cover" />
@@ -799,23 +870,23 @@ export default function VoiceCloningPage() {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <div className="text-sm font-bold text-gray-900">{modelTitle.trim() || '이름 없음'}</div>
-                        <span className="text-xs text-gray-500">@ {visibility}</span>
+                        <div className="text-sm font-bold text-zinc-900">{modelTitle.trim() || '이름 없음'}</div>
+                        <span className="text-xs text-zinc-500">@ {visibility}</span>
                       </div>
                       {modelDescription.trim() && (
-                        <div className="text-xs text-gray-500 mt-1 line-clamp-2">{modelDescription.trim()}</div>
+                        <div className="text-xs text-zinc-500 mt-1 line-clamp-2">{modelDescription.trim()}</div>
                       )}
                       <div className="flex flex-wrap gap-2 mt-2">
                         {previewTags.map((t) => (
                           <span
                             key={t}
-                            className="px-2 py-0.5 rounded-full bg-white border border-gray-200 text-[11px] text-gray-700"
+                            className="px-2 py-0.5 rounded-full bg-white border border-zinc-200 text-[11px] text-zinc-700"
                           >
                             {t}
                           </span>
                         ))}
                         {extraTagCount > 0 && (
-                          <span className="px-2 py-0.5 rounded-full bg-white border border-gray-200 text-[11px] text-gray-500">
+                          <span className="px-2 py-0.5 rounded-full bg-white border border-zinc-200 text-[11px] text-zinc-500">
                             +{extraTagCount}
                           </span>
                         )}
@@ -824,12 +895,12 @@ export default function VoiceCloningPage() {
                   </div>
                 </div>
 
-                <label className="flex items-start gap-3 text-sm text-gray-700">
+                <label className="flex items-start gap-3 text-sm text-zinc-700">
                   <input
                     type="checkbox"
                     checked={agree}
                     onChange={(e) => setAgree(e.target.checked)}
-                    className="mt-1"
+                    className="mt-1 accent-zinc-900"
                   />
                   <span>이 음성을 사용할 필요 권리가 있다는 것을 확인합니다. (필수)</span>
                 </label>
@@ -839,10 +910,10 @@ export default function VoiceCloningPage() {
                 <div className="flex justify-end">
                   <button
                     type="button"
-                    disabled={isSaving}
+                    disabled={isSaving || !agree || !modelTitle}
                     onClick={createModel}
                     className={`px-6 py-3 rounded-2xl font-bold text-sm transition ${
-                      isSaving ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-gray-800'
+                      isSaving || !agree || !modelTitle ? 'bg-zinc-200 text-zinc-500 cursor-not-allowed' : 'bg-zinc-900 text-white hover:bg-zinc-800'
                     }`}
                   >
                     {isSaving ? '보이스 생성 중...' : '보이스 클로닝'}

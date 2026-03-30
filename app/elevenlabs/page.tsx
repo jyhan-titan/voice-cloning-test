@@ -89,17 +89,17 @@ export default function AudioBookGeneratorPage() {
   return (
     <div className="max-w-2xl mx-auto p-10 font-sans">
       <header className="mb-8 border-b pb-4">
-        <h1 className="text-3xl font-bold text-gray-800">📚 AI 오디오북 엔진</h1>
-        <p className="text-gray-500 mt-2">여러 문단을 분석하여 자연스러운 하나의 음성 파일로 만듭니다.</p>
+        <h1 className="text-3xl font-bold text-zinc-800">📚 AI 오디오북 엔진</h1>
+        <p className="text-zinc-500 mt-2">여러 문단을 분석하여 자연스러운 하나의 음성 파일로 만듭니다.</p>
       </header>
 
       <main className="space-y-6">
         {/* 데이터 프리뷰 섹션 */}
-        <section className="bg-gray-50 p-4 rounded-lg border">
-          <h2 className="text-sm font-semibold text-gray-400 mb-2 uppercase">Input Preview</h2>
+        <section className="bg-zinc-50 p-4 rounded-lg border">
+          <h2 className="text-sm font-semibold text-zinc-400 mb-2 uppercase">Input Preview</h2>
           <div className="space-y-2">
             {tasks.map((task, i) => (
-              <p key={i} className="text-gray-700 text-sm">
+              <p key={i} className="text-zinc-700 text-sm">
                 <span className="font-bold text-blue-500">[{task.text}]</span>
               </p>
             ))}
@@ -112,7 +112,7 @@ export default function AudioBookGeneratorPage() {
             onClick={generateFullAudio}
             disabled={isLoading}
             className={`w-full py-4 rounded-xl font-bold text-white transition-all ${
-              isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 shadow-lg'
+              isLoading ? 'bg-zinc-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 shadow-lg'
             }`}
           >
             {isLoading ? (
@@ -124,7 +124,7 @@ export default function AudioBookGeneratorPage() {
 
           {isLoading && (
             <div className="w-full">
-              <div className="flex justify-between text-xs text-gray-500 mb-2">
+              <div className="flex justify-between text-xs text-zinc-500 mb-2">
                 <span>
                   {phase === 'merging'
                     ? '합치는 중'
@@ -138,7 +138,7 @@ export default function AudioBookGeneratorPage() {
                   {Math.min(completedCount, totalCount)}/{totalCount} ({Math.min(progressPercent, 100)}%)
                 </span>
               </div>
-              <div className="h-2 w-full bg-gray-200 rounded">
+              <div className="h-2 w-full bg-zinc-200 rounded">
                 <div
                   className="h-2 bg-blue-600 rounded"
                   style={{ width: `${Math.min(progressPercent, 100)}%` }}
@@ -147,7 +147,7 @@ export default function AudioBookGeneratorPage() {
             </div>
           )}
           
-          <p className="text-sm text-center text-gray-600 italic">
+          <p className="text-sm text-center text-zinc-600 italic">
             {status}
           </p>
         </div>

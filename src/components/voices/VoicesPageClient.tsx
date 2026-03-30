@@ -64,10 +64,10 @@ export function VoicesPageClient() {
     <div className="min-h-full px-8 py-10 font-sans">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900">보이스 리스트</h1>
-          <p className="text-sm text-zinc-500 mt-1">현재 사용할 수 있는 보이스, 커스텀 보이스 모델을 확인할 수 있습니다.</p>
+          <h1 className="text-2xl font-bold text-zinc-900">보이스 관리</h1>
+          <p className="text-sm text-zinc-500 mt-2">현재 사용할 수 있는 보이스, 커스텀 보이스 모델을 확인할 수 있습니다.</p>
         </div>
-        <Link href="/voices/create" className="px-4 py-2 rounded-xl bg-zinc-900 text-white text-sm font-semibold hover:bg-zinc-800">
+        <Link href="/voices/create" className="px-5 py-2.5 rounded-xl bg-zinc-800 text-white text-sm font-semibold hover:bg-zinc-800">
           보이스 생성
         </Link>
       </div>

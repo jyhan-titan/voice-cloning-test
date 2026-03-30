@@ -76,7 +76,7 @@ export function ContentEditForm({ initialItem }: Props) {
             <button
               type="button"
               onClick={save}
-              className="flex-1 px-5 py-2.5 rounded-2xl bg-zinc-900 text-white text-sm font-bold hover:bg-zinc-800 disabled:bg-zinc-300"
+              className="flex-1 px-5 py-2.5 rounded-2xl bg-zinc-800 text-white text-sm font-bold hover:bg-zinc-800 disabled:bg-zinc-300"
               disabled={phase === 'saving'}
             >
               저장

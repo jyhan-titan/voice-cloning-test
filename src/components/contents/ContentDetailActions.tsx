@@ -20,7 +20,7 @@ export function ContentDetailActions({ contentId, isAudiobook }: Props) {
           <button
             type="button"
             onClick={comingSoon}
-            className="px-4 py-2.5 rounded-2xl bg-zinc-900 text-white text-sm font-bold hover:bg-zinc-800 cursor-pointer"
+            className="px-4 py-2.5 rounded-2xl bg-zinc-800 text-white text-sm font-bold hover:bg-zinc-800 cursor-pointer"
           >
             오디오북 생성
           </button>
@@ -28,7 +28,7 @@ export function ContentDetailActions({ contentId, isAudiobook }: Props) {
           <button
             type="button"
             onClick={comingSoon}
-            className="px-4 py-2.5 rounded-2xl bg-zinc-900 text-white text-sm font-bold hover:bg-zinc-800 cursor-pointer"
+            className="px-4 py-2.5 rounded-2xl bg-zinc-800 text-white text-sm font-bold hover:bg-zinc-800 cursor-pointer"
           >
             오디오북 이동
           </button>
