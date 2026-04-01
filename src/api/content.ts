@@ -7,7 +7,7 @@ import { apiFetch } from './fetcher';
 export type ContentItem = {
   id: string;
   title: string;
-  nodes: TiptapNode[];  
+  nodes: TiptapNode[];
   isAudiobook: boolean;
 };
 
@@ -37,7 +37,6 @@ let CONTENTS: ContentItem[] = [
     title: '지친 나를 위한 작은 선물: 주말 숲 산책 가이드',
     nodes: BLOG_TEXT,
     isAudiobook: false,
-
   },
 ];
 
@@ -47,16 +46,19 @@ export function listContentsSync(): ListContentsResponse {
 
 export function getContentByIdSync(id: string): ContentItem {
   const normalized = normalizeId(id);
-  const found = CONTENTS.find((c) => normalizeId(c.id) === normalized);
+  const found = CONTENTS.find(c => normalizeId(c.id) === normalized);
   if (!found) {
     throw new Error('Content not found');
   }
   return found;
 }
 
-export function updateContentByIdSync(id: string, patch: Partial<Pick<ContentItem, 'title' | 'nodes'>>): ContentItem {
+export function updateContentByIdSync(
+  id: string,
+  patch: Partial<Pick<ContentItem, 'title' | 'nodes'>>,
+): ContentItem {
   const normalized = normalizeId(id);
-  const idx = CONTENTS.findIndex((c) => normalizeId(c.id) === normalized);
+  const idx = CONTENTS.findIndex(c => normalizeId(c.id) === normalized);
   if (idx === -1) {
     throw new Error('Content not found');
   }
@@ -78,7 +80,7 @@ export async function listContents(): Promise<ListContentsResponse> {
 
 export async function getContentById(id: string): Promise<ContentItem> {
   const normalized = normalizeId(id);
-  const found = CONTENTS.find((c) => normalizeId(c.id) === normalized);
+  const found = CONTENTS.find(c => normalizeId(c.id) === normalized);
   if (!found) {
     throw new Error('Content not found');
   }
@@ -95,7 +97,7 @@ export async function fetchContentById(id: string): Promise<ContentItem> {
 
 export async function patchContentById(
   id: string,
-  patch: Partial<Pick<ContentItem, 'title' | 'nodes'>>
+  patch: Partial<Pick<ContentItem, 'title' | 'nodes'>>,
 ): Promise<ContentItem> {
   return apiFetch<ContentItem>(`/api/contents/${encodeURIComponent(id)}`, {
     method: 'PATCH',

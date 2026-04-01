@@ -37,22 +37,24 @@ export const extractTextFromNode = (node: TiptapNode): string => {
   if (node.text) {
     return node.text;
   }
-  
+
   // 2. 자식 노드가 있는 경우 재귀 호출
   if (node.content && Array.isArray(node.content)) {
-    return node.content.map(extractTextFromNode).join("");
+    return node.content.map(extractTextFromNode).join('');
   }
-  
-  return "";
+
+  return '';
 };
 
 /**
  * Tiptap Content 배열을 Fish Audio 전용 객체로 변환
  */
-export const transformTiptapToFishAudio = (contentArray: TiptapNode[]): FishAudioTask[] => {
+export const transformTiptapToFishAudio = (
+  contentArray: TiptapNode[],
+): FishAudioTask[] => {
   return contentArray.map((node: TiptapNode): FishAudioTask => {
     const rawText: string = extractTextFromNode(node);
-    
+
     let processedText: string = rawText;
     let prosody: FishAudioProsody = { speed: 1.0, volume: 0 };
 
@@ -64,7 +66,7 @@ export const transformTiptapToFishAudio = (contentArray: TiptapNode[]): FishAudi
           processedText = `${rawText}... `; // 대제목 호흡
           prosody = { speed: 0.8, volume: 3.0 };
         } else {
-          processedText = `${rawText}. `; 
+          processedText = `${rawText}. `;
           prosody = { speed: 0.9, volume: 1.5 };
         }
         break;
@@ -78,7 +80,9 @@ export const transformTiptapToFishAudio = (contentArray: TiptapNode[]): FishAudi
 
       case 'paragraph': {
         // 본문 내 특정 마크(bold 등)가 있는지 체크하여 텍스트 강조 처리 (선택 사항)
-        const hasBold = node.content?.some(c => c.marks?.some(m => m.type === 'bold'));
+        const hasBold = node.content?.some(c =>
+          c.marks?.some(m => m.type === 'bold'),
+        );
         if (hasBold) {
           // 볼드가 포함된 문단은 아주 미세하게 힘을 실음
           prosody = { speed: 0.98, volume: 0.5 };
@@ -94,13 +98,10 @@ export const transformTiptapToFishAudio = (contentArray: TiptapNode[]): FishAudi
       text: processedText,
       prosody,
       format: 'mp3',
-      mp3_bitrate: 128
+      mp3_bitrate: 128,
     };
   });
 };
-
-
-
 
 ////// 일레븐랩스
 // 4. ElevenLabs 전용 파라미터 타입
@@ -121,17 +122,19 @@ export interface ElevenLabsTask {
 /**
  * Tiptap Content 배열을 ElevenLabs 전용 객체로 변환
  */
-export const transformTiptapToElevenLabs = (contentArray: TiptapNode[]): ElevenLabsTask[] => {
+export const transformTiptapToElevenLabs = (
+  contentArray: TiptapNode[],
+): ElevenLabsTask[] => {
   return contentArray.map((node: TiptapNode): ElevenLabsTask => {
     const rawText: string = extractTextFromNode(node);
-    
+
     // 💡 변수 자체를 재할당하지 않으므로 const로 선언합니다.
     const voiceSettings: ElevenLabsVoiceSettings = {
       stability: 0.5,
       similarity_boost: 0.75,
       style: 0.0,
       use_speaker_boost: true,
-      speed: 1.0
+      speed: 1.0,
     };
 
     let processedText: string = rawText;
@@ -140,8 +143,8 @@ export const transformTiptapToElevenLabs = (contentArray: TiptapNode[]): ElevenL
     switch (node.type) {
       case 'heading': {
         voiceSettings.stability = 0.7; // 정상 작동
-        voiceSettings.speed = 0.9;     // 정상 작동
-        processedText = `${rawText}.`; 
+        voiceSettings.speed = 0.9; // 정상 작동
+        processedText = `${rawText}.`;
         break;
       }
 
@@ -153,7 +156,9 @@ export const transformTiptapToElevenLabs = (contentArray: TiptapNode[]): ElevenL
       }
 
       case 'paragraph': {
-        const hasBold = node.content?.some(c => c.marks?.some(m => m.type === 'bold'));
+        const hasBold = node.content?.some(c =>
+          c.marks?.some(m => m.type === 'bold'),
+        );
         if (hasBold) {
           voiceSettings.style = 0.2;
           voiceSettings.stability = 0.4;
@@ -162,10 +167,9 @@ export const transformTiptapToElevenLabs = (contentArray: TiptapNode[]): ElevenL
       }
     }
 
-
     return {
       text: processedText,
-      model_id: "eleven_multilingual_v2",
+      model_id: 'eleven_multilingual_v2',
       voice_settings: voiceSettings,
     };
   });

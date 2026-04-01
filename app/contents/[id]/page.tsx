@@ -1,6 +1,7 @@
 import { getContentByIdSync } from '@/src/api/content';
 import { ContentDetailActions } from '@/src/components/contents/ContentDetailActions';
 import { ContentRenderer } from '@/src/components/contents/ContentRenderer';
+import Breadcrumbs from '@/src/components/navigation/Breadcrumbs';
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -20,7 +21,16 @@ export default async function ContentDetailPage({ params }: Props) {
     <div className="min-h-full px-8 py-10 font-sans">
       {item ? (
         <div className="space-y-6">
-            <ContentDetailActions contentId={item.id} isAudiobook={item.isAudiobook} />
+          <Breadcrumbs
+            items={[
+              { label: '콘텐츠', href: '/contents' },
+              { label: item.title || item.id },
+            ]}
+          />
+          <ContentDetailActions
+            contentId={item.id}
+            isAudiobook={item.isAudiobook}
+          />
 
           <div className="rounded-3xl border border-zinc-200 bg-white p-8">
             <ContentRenderer nodes={item.nodes} />
@@ -28,8 +38,12 @@ export default async function ContentDetailPage({ params }: Props) {
         </div>
       ) : (
         <div className="rounded-3xl border border-zinc-200 bg-white p-8">
-          <div className="text-lg font-bold text-zinc-900">콘텐츠를 찾을 수 없습니다.</div>
-          <div className="mt-2 text-sm text-zinc-600">잘못된 ID로 접근했거나 콘텐츠가 삭제되었습니다.</div>
+          <div className="text-lg font-bold text-zinc-900">
+            콘텐츠를 찾을 수 없습니다.
+          </div>
+          <div className="mt-2 text-sm text-zinc-600">
+            잘못된 ID로 접근했거나 콘텐츠가 삭제되었습니다.
+          </div>
         </div>
       )}
     </div>

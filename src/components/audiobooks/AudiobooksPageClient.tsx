@@ -1,22 +1,21 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { listAudiobooks, type Audiobook } from '@/src/api/audiobook';
 import { AudiobookListItem } from '@/src/components/audiobooks/AudiobookListItem';
-import { CreateAudiobookModal } from '@/src/components/audiobooks/CreateAudiobookModal';
 
 type Phase = 'idle' | 'loading' | 'error';
 
 export function AudiobooksPageClient() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const initialContentId = searchParams.get('contentId') ?? '';
 
   const [phase, setPhase] = useState<Phase>('idle');
   const [items, setItems] = useState<Audiobook[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
 
   const isLoading = useMemo(() => phase === 'loading', [phase]);
 
@@ -28,7 +27,9 @@ export function AudiobooksPageClient() {
       setItems(res.items);
       setPhase('idle');
     } catch (e) {
-      setErrorMessage(e instanceof Error ? e.message : '목록을 불러오지 못했습니다.');
+      setErrorMessage(
+        e instanceof Error ? e.message : '목록을 불러오지 못했습니다.',
+      );
       setPhase('error');
     }
   };
@@ -42,20 +43,24 @@ export function AudiobooksPageClient() {
   useEffect(() => {
     if (!initialContentId) return;
     Promise.resolve().then(() => {
-      setCreateOpen(true);
+      router.push(
+        `/audiobooks/create?contentId=${encodeURIComponent(initialContentId)}`,
+      );
     });
-  }, [initialContentId]);
+  }, [initialContentId, router]);
 
   return (
     <div className="min-h-full px-8 py-10 font-sans">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900">오디오북</h1>
-          <p className="text-sm text-zinc-500 mt-2">생성된 오디오북을 관리합니다.</p>
+          <p className="text-sm text-zinc-500 mt-2">
+            생성된 오디오북을 관리합니다.
+          </p>
         </div>
         <button
           type="button"
-          onClick={() => setCreateOpen(true)}
+          onClick={() => router.push('/audiobooks/create')}
           className="px-5 py-2.5 rounded-2xl bg-zinc-800 text-white text-sm font-bold hover:bg-zinc-800"
         >
           오디오북 만들기
@@ -64,16 +69,20 @@ export function AudiobooksPageClient() {
 
       <div className="mt-8">
         {isLoading && (
-          <div className="rounded-2xl border border-zinc-200 bg-white px-5 py-4 text-sm text-zinc-600">불러오는 중...</div>
+          <div className="rounded-2xl border border-zinc-200 bg-white px-5 py-4 text-sm text-zinc-600">
+            불러오는 중...
+          </div>
         )}
 
         {errorMessage && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">{errorMessage}</div>
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+            {errorMessage}
+          </div>
         )}
 
         {!isLoading && !errorMessage && (
           <div className="grid grid-cols-1 gap-3">
-            {items.map((item) => (
+            {items.map(item => (
               <AudiobookListItem key={item.id} item={item} />
             ))}
             {items.length === 0 && (
@@ -84,16 +93,6 @@ export function AudiobooksPageClient() {
           </div>
         )}
       </div>
-
-      <CreateAudiobookModal
-        key={initialContentId || 'default'}
-        open={createOpen}
-        onClose={() => {
-          setCreateOpen(false);
-          refresh();
-        }}
-        initialContentId={initialContentId || undefined}
-      />
     </div>
   );
 }

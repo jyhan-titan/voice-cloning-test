@@ -3,7 +3,10 @@ export type ApiError = {
   message: string;
 };
 
-export async function apiFetch<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
+export async function apiFetch<T>(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<T> {
   const res = await fetch(input, {
     ...init,
     headers: {

@@ -22,7 +22,8 @@ export default function Home() {
         <div className="mt-10 rounded-3xl border border-zinc-200 bg-white/50 p-6">
           <div className="text-sm font-semibold text-zinc-900">Guide</div>
           <div className="mt-2 text-sm text-zinc-600">
-            왼쪽 메뉴에서 <span className="font-semibold">보이스</span>로 이동해 음성을 복제해보세요.
+            왼쪽 메뉴에서 <span className="font-semibold">보이스</span>로 이동해
+            음성을 복제해보세요.
           </div>
         </div>
       </div>

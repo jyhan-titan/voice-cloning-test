@@ -21,7 +21,7 @@
 //       console.log("🚀 ~ POST ~ res:", res)
 
 //       if (!res.ok) throw new Error("문단 생성 실패");
-      
+
 //       // Response를 ArrayBuffer로 변환하여 반환
 //       return await res.arrayBuffer();
 //     });
@@ -53,32 +53,37 @@ export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
   try {
-        const { voiceId, ...task } = await req.json(); // transformTiptapToElevenLabs의 결과물 배열
+    const { voiceId, ...task } = await req.json(); // transformTiptapToElevenLabs의 결과물 배열
     const apiKey = process.env.ELEVENLABS_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
         { error: 'Missing ELEVENLABS_API_KEY' },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
-
-    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'xi-api-key': apiKey,
+    const response = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'xi-api-key': apiKey,
+        },
+        body: JSON.stringify({
+          ...task,
+          outputFormat: 'mp3_44100_128',
+          modelId: 'eleven_multilingual_v2',
+        }),
       },
-      body: JSON.stringify({
-        ...task,
-        outputFormat: "mp3_44100_128",
-        modelId: "eleven_multilingual_v2",
-      }),
-    });
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
-      return NextResponse.json({ error: errorText }, { status: response.status });
+      return NextResponse.json(
+        { error: errorText },
+        { status: response.status },
+      );
     }
 
     return new NextResponse(response.body, {

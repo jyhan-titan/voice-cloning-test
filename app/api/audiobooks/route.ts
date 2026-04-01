@@ -22,3 +22,19 @@ export async function GET() {
     ],
   });
 }
+
+export async function POST(req: Request) {
+  const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+  const contentId =
+    typeof body?.contentId === 'string' ? body.contentId : 'unknown';
+  const title = typeof body?.title === 'string' ? body.title : '오디오북';
+
+  const id = `ab_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+
+  return NextResponse.json({
+    id,
+    title,
+    contentId,
+    createdAt: new Date().toISOString(),
+  });
+}

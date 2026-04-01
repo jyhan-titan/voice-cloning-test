@@ -12,7 +12,10 @@ type Props = {
 export function ContentEditForm({ initialItem }: Props) {
   const router = useRouter();
 
-  const initialNodesJson = useMemo(() => JSON.stringify(initialItem.nodes, null, 2), [initialItem.nodes]);
+  const initialNodesJson = useMemo(
+    () => JSON.stringify(initialItem.nodes, null, 2),
+    [initialItem.nodes],
+  );
 
   const [phase, setPhase] = useState<'idle' | 'saving' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -49,12 +52,14 @@ export function ContentEditForm({ initialItem }: Props) {
       <div className="col-span-12 md:col-span-4">
         <div className="rounded-3xl border border-zinc-200 bg-white p-5">
           <div className="text-xs font-semibold text-zinc-600">ID</div>
-          <div className="mt-1 font-mono text-sm text-zinc-900">{initialItem.id}</div>
+          <div className="mt-1 font-mono text-sm text-zinc-900">
+            {initialItem.id}
+          </div>
 
           <div className="mt-6 text-xs font-semibold text-zinc-600">TITLE</div>
           <input
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={e => setTitle(e.target.value)}
             className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none focus:ring-2 focus:ring-zinc-900/10"
           />
 
@@ -90,7 +95,7 @@ export function ContentEditForm({ initialItem }: Props) {
           <div className="text-sm font-bold text-zinc-900">nodes JSON</div>
           <textarea
             value={nodesJson}
-            onChange={(e) => setNodesJson(e.target.value)}
+            onChange={e => setNodesJson(e.target.value)}
             spellCheck={false}
             className="mt-4 h-[480px] w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 font-mono text-xs text-zinc-900 outline-none focus:ring-2 focus:ring-zinc-900/10"
           />

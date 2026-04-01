@@ -18,13 +18,23 @@ function uniqTags(tags: string[]) {
   return Array.from(new Set(tags.map(t => t.trim()).filter(Boolean)));
 }
 
-function TagButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function TagButton({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={`px-3 py-1 rounded-full border text-xs font-semibold transition ${
-        active ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50'
+        active
+          ? 'bg-zinc-900 text-white border-zinc-900'
+          : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50'
       }`}
     >
       {label}
@@ -32,7 +42,11 @@ function TagButton({ label, active, onClick }: { label: string; active: boolean;
   );
 }
 
-export default function VoiceModelDetailsPage({ params }: { params: { id: string } }) {
+export default function VoiceModelDetailsPage({
+  params,
+}: {
+  params: { id: string };
+}) {
   const router = useRouter();
   const id = params.id;
 
@@ -52,10 +66,25 @@ export default function VoiceModelDetailsPage({ params }: { params: { id: string
     () => ({
       gender: ['남성', '여성'],
       age: ['젊은', '중년', '이전'],
-      use: ['내레이션', '교육용', '광고', '대화형', '소셜 미디어', '엔터테인먼트'],
-      quality: ['중저음', '부드러움', '차분함', '충격적', '전문가', '자신감 있는', '지우기'],
+      use: [
+        '내레이션',
+        '교육용',
+        '광고',
+        '대화형',
+        '소셜 미디어',
+        '엔터테인먼트',
+      ],
+      quality: [
+        '중저음',
+        '부드러움',
+        '차분함',
+        '충격적',
+        '전문가',
+        '자신감 있는',
+        '지우기',
+      ],
     }),
-    []
+    [],
   );
 
   useEffect(() => {
@@ -64,10 +93,17 @@ export default function VoiceModelDetailsPage({ params }: { params: { id: string
       setIsLoading(true);
       setLoadError(null);
       try {
-        const res = await fetch(`/api/fish-audio-model/${encodeURIComponent(id)}`);
-        const data = (await res.json()) as ModelResponse | { error?: string; message?: string };
+        const res = await fetch(
+          `/api/fish-audio-model/${encodeURIComponent(id)}`,
+        );
+        const data = (await res.json()) as
+          | ModelResponse
+          | { error?: string; message?: string };
         if (!res.ok) {
-          const msg = (data as { error?: string; message?: string }).error || (data as { message?: string }).message || '로드 실패';
+          const msg =
+            (data as { error?: string; message?: string }).error ||
+            (data as { message?: string }).message ||
+            '로드 실패';
           throw new Error(msg);
         }
         if (cancelled) return;
@@ -121,18 +157,25 @@ export default function VoiceModelDetailsPage({ params }: { params: { id: string
 
     setIsSaving(true);
     try {
-      const res = await fetch(`/api/fish-audio-model/${encodeURIComponent(id)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: title.trim(),
-          description: description.trim(),
-          visibility,
-          tags: uniqTags(tags),
-        }),
-      });
+      const res = await fetch(
+        `/api/fish-audio-model/${encodeURIComponent(id)}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: title.trim(),
+            description: description.trim(),
+            visibility,
+            tags: uniqTags(tags),
+          }),
+        },
+      );
 
-      const data = (await res.json()) as { status?: number; message?: string; error?: string };
+      const data = (await res.json()) as {
+        status?: number;
+        message?: string;
+        error?: string;
+      };
       if (!res.ok) {
         const msg = data.error || data.message || '저장 실패';
         throw new Error(msg);
@@ -169,11 +212,15 @@ export default function VoiceModelDetailsPage({ params }: { params: { id: string
         <aside className="col-span-12 md:col-span-3">
           <div className="space-y-6 text-sm">
             <div className="flex items-center gap-3 text-zinc-500">
-              <div className="w-6 h-6 rounded-full border border-zinc-200 flex items-center justify-center">1</div>
+              <div className="w-6 h-6 rounded-full border border-zinc-200 flex items-center justify-center">
+                1
+              </div>
               <span>소스 오디오</span>
             </div>
             <div className="flex items-center gap-3 text-zinc-900 font-semibold">
-              <div className="w-6 h-6 rounded-full bg-zinc-900 text-white flex items-center justify-center">2</div>
+              <div className="w-6 h-6 rounded-full bg-zinc-900 text-white flex items-center justify-center">
+                2
+              </div>
               <span>음성 세부 정보</span>
             </div>
           </div>
@@ -188,7 +235,9 @@ export default function VoiceModelDetailsPage({ params }: { params: { id: string
             ) : (
               <div className="space-y-8">
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-zinc-700">이름</label>
+                  <label className="text-sm font-semibold text-zinc-700">
+                    이름
+                  </label>
                   <input
                     value={title}
                     onChange={e => setTitle(e.target.value)}
@@ -198,7 +247,9 @@ export default function VoiceModelDetailsPage({ params }: { params: { id: string
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-zinc-700">설명 (선택 사항)</label>
+                  <label className="text-sm font-semibold text-zinc-700">
+                    설명 (선택 사항)
+                  </label>
                   <textarea
                     value={description}
                     onChange={e => setDescription(e.target.value)}
@@ -209,8 +260,12 @@ export default function VoiceModelDetailsPage({ params }: { params: { id: string
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <label className="text-sm font-semibold text-zinc-700">태그 (선택 사항)</label>
-                    <span className="text-xs text-zinc-400">{tags.length}개</span>
+                    <label className="text-sm font-semibold text-zinc-700">
+                      태그 (선택 사항)
+                    </label>
+                    <span className="text-xs text-zinc-400">
+                      {tags.length}개
+                    </span>
                   </div>
 
                   <div className="flex gap-2">
@@ -260,43 +315,73 @@ export default function VoiceModelDetailsPage({ params }: { params: { id: string
                 </div>
 
                 <div className="space-y-4">
-                  <div className="text-sm font-semibold text-zinc-700">성별</div>
+                  <div className="text-sm font-semibold text-zinc-700">
+                    성별
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {presetTags.gender.map(t => (
-                      <TagButton key={t} label={t} active={tags.includes(t)} onClick={() => toggleTag(t)} />
+                      <TagButton
+                        key={t}
+                        label={t}
+                        active={tags.includes(t)}
+                        onClick={() => toggleTag(t)}
+                      />
                     ))}
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <div className="text-sm font-semibold text-zinc-700">나이</div>
+                  <div className="text-sm font-semibold text-zinc-700">
+                    나이
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {presetTags.age.map(t => (
-                      <TagButton key={t} label={t} active={tags.includes(t)} onClick={() => toggleTag(t)} />
+                      <TagButton
+                        key={t}
+                        label={t}
+                        active={tags.includes(t)}
+                        onClick={() => toggleTag(t)}
+                      />
                     ))}
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <div className="text-sm font-semibold text-zinc-700">사용 사례</div>
+                  <div className="text-sm font-semibold text-zinc-700">
+                    사용 사례
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {presetTags.use.map(t => (
-                      <TagButton key={t} label={t} active={tags.includes(t)} onClick={() => toggleTag(t)} />
+                      <TagButton
+                        key={t}
+                        label={t}
+                        active={tags.includes(t)}
+                        onClick={() => toggleTag(t)}
+                      />
                     ))}
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <div className="text-sm font-semibold text-zinc-700">음성 품질</div>
+                  <div className="text-sm font-semibold text-zinc-700">
+                    음성 품질
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {presetTags.quality.map(t => (
-                      <TagButton key={t} label={t} active={tags.includes(t)} onClick={() => toggleTag(t)} />
+                      <TagButton
+                        key={t}
+                        label={t}
+                        active={tags.includes(t)}
+                        onClick={() => toggleTag(t)}
+                      />
                     ))}
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <div className="text-sm font-semibold text-zinc-700">타입</div>
+                  <div className="text-sm font-semibold text-zinc-700">
+                    타입
+                  </div>
                   <div className="flex items-center gap-6 text-sm">
                     <label className="flex items-center gap-2">
                       <input
@@ -327,25 +412,37 @@ export default function VoiceModelDetailsPage({ params }: { params: { id: string
                     </label>
                   </div>
                   <p className="text-xs text-zinc-400">
-                    공개 모델은 발견 페이지에서 볼 수 있으며, unlist는 링크가 있는 사람만 볼 수 있습니다.
+                    공개 모델은 발견 페이지에서 볼 수 있으며, unlist는 링크가
+                    있는 사람만 볼 수 있습니다.
                   </p>
                 </div>
 
                 <div className="rounded-2xl bg-zinc-50 border border-zinc-100 p-5">
-                  <div className="text-xs text-zinc-400 font-semibold mb-3">미리보기</div>
+                  <div className="text-xs text-zinc-400 font-semibold mb-3">
+                    미리보기
+                  </div>
                   <div className="flex items-center gap-4">
                     <div className="w-14 h-14 rounded-2xl bg-zinc-200" />
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <div className="text-sm font-bold text-zinc-900">{title.trim() || '이름 없음'}</div>
-                        <span className="text-xs text-zinc-500">@ {visibility}</span>
+                        <div className="text-sm font-bold text-zinc-900">
+                          {title.trim() || '이름 없음'}
+                        </div>
+                        <span className="text-xs text-zinc-500">
+                          @ {visibility}
+                        </span>
                       </div>
                       {description.trim() && (
-                        <div className="text-xs text-zinc-500 mt-1 line-clamp-2">{description.trim()}</div>
+                        <div className="text-xs text-zinc-500 mt-1 line-clamp-2">
+                          {description.trim()}
+                        </div>
                       )}
                       <div className="flex flex-wrap gap-2 mt-2">
                         {previewTags.map(t => (
-                          <span key={t} className="px-2 py-0.5 rounded-full bg-white border border-zinc-200 text-[11px] text-zinc-700">
+                          <span
+                            key={t}
+                            className="px-2 py-0.5 rounded-full bg-white border border-zinc-200 text-[11px] text-zinc-700"
+                          >
                             {t}
                           </span>
                         ))}
@@ -366,10 +463,14 @@ export default function VoiceModelDetailsPage({ params }: { params: { id: string
                     onChange={e => setAgree(e.target.checked)}
                     className="mt-1"
                   />
-                  <span>이 음성을 사용할 필요 권리가 있다는 것을 확인합니다. (필수)</span>
+                  <span>
+                    이 음성을 사용할 필요 권리가 있다는 것을 확인합니다. (필수)
+                  </span>
                 </label>
 
-                {saveError && <div className="text-sm text-red-600">{saveError}</div>}
+                {saveError && (
+                  <div className="text-sm text-red-600">{saveError}</div>
+                )}
 
                 <div className="flex justify-end">
                   <button
@@ -377,14 +478,18 @@ export default function VoiceModelDetailsPage({ params }: { params: { id: string
                     disabled={isSaving || isLoading}
                     onClick={save}
                     className={`px-6 py-3 rounded-2xl font-bold text-sm transition ${
-                      isSaving || isLoading ? 'bg-zinc-200 text-zinc-500 cursor-not-allowed' : 'bg-zinc-900 text-white hover:bg-zinc-800'
+                      isSaving || isLoading
+                        ? 'bg-zinc-200 text-zinc-500 cursor-not-allowed'
+                        : 'bg-zinc-900 text-white hover:bg-zinc-800'
                     }`}
                   >
                     {isSaving ? '저장 중...' : '새로 만들기'}
                   </button>
                 </div>
 
-                {loadError && <div className="text-sm text-red-600">{loadError}</div>}
+                {loadError && (
+                  <div className="text-sm text-red-600">{loadError}</div>
+                )}
               </div>
             )}
           </div>

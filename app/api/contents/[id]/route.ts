@@ -5,7 +5,10 @@ import type { TiptapNode } from '@/src/utils/voice';
 
 export const runtime = 'nodejs';
 
-export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export async function GET(
+  _req: NextRequest,
+  ctx: { params: Promise<{ id: string }> },
+) {
   try {
     const { id } = await ctx.params;
     const item = getContentByIdSync(id);
@@ -13,18 +16,23 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : 'Not found' },
-      { status: 404 }
+      { status: 404 },
     );
   }
 }
 
-export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export async function PATCH(
+  req: NextRequest,
+  ctx: { params: Promise<{ id: string }> },
+) {
   try {
     const { id } = await ctx.params;
     const body = await req.json();
 
     const patch: { title?: string; nodes?: unknown } = body ?? {};
-    const nodes = Array.isArray(patch.nodes) ? (patch.nodes as TiptapNode[]) : undefined;
+    const nodes = Array.isArray(patch.nodes)
+      ? (patch.nodes as TiptapNode[])
+      : undefined;
     const next = updateContentByIdSync(id, {
       ...(typeof patch.title === 'string' ? { title: patch.title } : {}),
       ...(nodes ? { nodes } : {}),
@@ -34,7 +42,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : 'Update failed' },
-      { status: 400 }
+      { status: 400 },
     );
   }
 }

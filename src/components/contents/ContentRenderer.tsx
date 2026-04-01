@@ -17,7 +17,7 @@ function renderInline(inlines: InlineNode[] | undefined) {
 
   return inlines.map((n, idx) => {
     const text = n.text ?? '';
-    const isBold = n.marks?.some((m) => m.type === 'bold');
+    const isBold = n.marks?.some(m => m.type === 'bold');
 
     if (isBold) {
       return (
@@ -35,9 +35,19 @@ function renderInline(inlines: InlineNode[] | undefined) {
   });
 }
 
-function Heading({ level, children }: { level: number; children: React.ReactNode }) {
+function Heading({
+  level,
+  children,
+}: {
+  level: number;
+  children: React.ReactNode;
+}) {
   if (level === 1) {
-    return <h1 className="text-3xl font-bold tracking-tight text-zinc-900 leading-tight">{children}</h1>;
+    return (
+      <h1 className="text-3xl font-bold tracking-tight text-zinc-900 leading-tight">
+        {children}
+      </h1>
+    );
   }
   if (level === 2) {
     return <h2 className="text-xl font-bold text-zinc-900 mt-8">{children}</h2>;
@@ -51,7 +61,8 @@ export function ContentRenderer({ nodes }: Props) {
       <div className="space-y-4">
         {nodes.map((node, idx) => {
           if (node.type === 'heading') {
-            const level = typeof node.attrs?.level === 'number' ? node.attrs.level : 1;
+            const level =
+              typeof node.attrs?.level === 'number' ? node.attrs.level : 1;
             return (
               <Heading key={idx} level={level}>
                 {renderInline(node.content as InlineNode[])}
@@ -68,7 +79,9 @@ export function ContentRenderer({ nodes }: Props) {
           }
 
           if (node.type === 'blockquote') {
-            const inner = Array.isArray(node.content) ? (node.content as TiptapNode[]) : [];
+            const inner = Array.isArray(node.content)
+              ? (node.content as TiptapNode[])
+              : [];
             return (
               <blockquote
                 key={idx}
@@ -78,7 +91,10 @@ export function ContentRenderer({ nodes }: Props) {
                   {inner.map((child, childIdx) => {
                     if (child.type === 'paragraph') {
                       return (
-                        <p key={childIdx} className="text-sm leading-6 text-zinc-700">
+                        <p
+                          key={childIdx}
+                          className="text-sm leading-6 text-zinc-700"
+                        >
                           {renderInline(child.content as InlineNode[])}
                         </p>
                       );

@@ -8,11 +8,16 @@ export async function POST(req: NextRequest) {
     if (!apiKey) {
       return NextResponse.json(
         { error: 'Missing FISH_AUDIO_API_KEY' },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
-    const body = await req.json();
+    const body = (await req.json()) as Record<string, unknown>;
+
+    // Backward compatibility: allow clients to send `voiceId`.
+    // Fish Audio expects `reference_id` (string | string[]).
+    const { voiceId, reference_id, ...rest } = body;
+    const finalReferenceId = (reference_id ?? voiceId) as unknown;
 
     const response = await fetch('https://api.fish.audio/v1/tts', {
       method: 'POST',
@@ -22,7 +27,10 @@ export async function POST(req: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        ...body,
+        ...rest,
+        ...(finalReferenceId != null
+          ? { reference_id: finalReferenceId }
+          : null),
         format: 'mp3',
         mp3_bitrate: 128,
         latency: 'normal',
@@ -31,7 +39,10 @@ export async function POST(req: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      return NextResponse.json({ error: errorText }, { status: response.status });
+      return NextResponse.json(
+        { error: errorText },
+        { status: response.status },
+      );
     }
 
     return new NextResponse(response.body, {

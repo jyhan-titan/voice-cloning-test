@@ -25,7 +25,7 @@ export function SidebarNav() {
 
   return (
     <nav className="px-3 pb-6">
-      {NAV_ITEMS.map((item) => {
+      {NAV_ITEMS.map(item => {
         const active = isActivePath(pathname, item.href);
         return (
           <Link
