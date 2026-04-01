@@ -18,7 +18,7 @@ export default async function ContentDetailPage({ params }: Props) {
   }
 
   return (
-    <div className="min-h-full px-8 py-10 font-sans">
+    <div className="min-h-full px-4 py-6 font-sans sm:px-6 sm:py-8 lg:px-8 lg:py-10">
       {item ? (
         <div className="space-y-6">
           <Breadcrumbs

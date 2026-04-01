@@ -463,7 +463,7 @@ export default function VoiceCloningPage() {
   const isDisabled = totalDuration < 10 || isRecording;
 
   return (
-    <div className="max-w-5xl mx-auto p-10 bg-[#F9FAFB] font-sans">
+    <div className="max-w-5xl mx-auto p-4 bg-[#F9FAFB] font-sans sm:p-6 lg:p-10">
       {isSaving && (
         <AudioLoading>
           <div className="text-lg font-semibold text-zinc-900">

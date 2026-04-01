@@ -1,33 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import Player from 'react-lottie-player';
+import loadingAnimation from '@/src/components/lottie/loading_lottie.json';
 
 export default function AudioLoading({
   children,
 }: {
   children?: React.ReactNode;
 }) {
-  const [loadingAnimation, setLoadingAnimation] = useState<unknown | null>(
-    null,
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch('/loading_lottie.json')
-      .then(res => res.json())
-      .then(json => {
-        if (cancelled) return;
-        setLoadingAnimation(json);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setLoadingAnimation(null);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;
     const prevPaddingRight = document.body.style.paddingRight;
@@ -65,18 +44,12 @@ export default function AudioLoading({
     shadow-[0_0_50px_30px_rgba(255,255,255,1)]"
       >
         <div className="w-3xl h-3xl">
-          {loadingAnimation ? (
-            <Player
-              play
-              loop
-              animationData={loadingAnimation}
-              style={{ width: '100%', height: '100%' }}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-sm text-zinc-500">
-              Loading...
-            </div>
-          )}
+          <Player
+            play
+            loop
+            animationData={loadingAnimation}
+            style={{ width: '100%', height: '100%' }}
+          />
         </div>
         {children}
       </div>

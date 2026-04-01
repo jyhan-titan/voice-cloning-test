@@ -320,12 +320,12 @@ export function VoicesPageClient() {
   }, [loadMoreCustom, loadMoreDefault, tab]);
 
   return (
-    <div className="min-h-full px-8 py-10 font-sans">
+    <div className="min-h-full px-4 py-6 font-sans sm:px-6 sm:py-8 lg:px-8 lg:py-10">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900">보이스 관리</h1>
           <p className="text-sm text-zinc-500 mt-2">
-            현재 사용할 수 있는 보이스, 커스텀 보이스 모델을 확인할 수 있습니다.
+            생성한 목소리를 확인하고 테스트할 수 있습니다.
           </p>
         </div>
         <Link

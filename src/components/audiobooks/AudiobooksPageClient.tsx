@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { listAudiobooks, type Audiobook } from '@/src/api/audiobook';
@@ -19,7 +19,7 @@ export function AudiobooksPageClient() {
 
   const isLoading = useMemo(() => phase === 'loading', [phase]);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     try {
       setPhase('loading');
       setErrorMessage(null);
@@ -32,13 +32,13 @@ export function AudiobooksPageClient() {
       );
       setPhase('error');
     }
-  };
+  }, []);
 
   useEffect(() => {
     Promise.resolve().then(() => {
       void refresh();
     });
-  }, []);
+  }, [refresh]);
 
   useEffect(() => {
     if (!initialContentId) return;
@@ -50,7 +50,7 @@ export function AudiobooksPageClient() {
   }, [initialContentId, router]);
 
   return (
-    <div className="min-h-full px-8 py-10 font-sans">
+    <div className="min-h-full px-4 py-6 font-sans sm:px-6 sm:py-8 lg:px-8 lg:py-10">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900">오디오북</h1>
