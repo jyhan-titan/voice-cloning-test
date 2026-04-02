@@ -11,6 +11,11 @@ import { useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 import AudioLoading from '@/src/components/loading/AudioLoading';
 import Breadcrumbs from '@/src/components/navigation/Breadcrumbs';
+import {
+  isReactNativeWebView,
+  postToReactNativeWebView,
+} from '@/src/utils/reactNative';
+import { base64ToBlob } from '@/src/utils/file';
 // import { extractTextFromNode, TiptapNode } from '@/utils/voice'; // Tiptap 유틸 (사용자 데이터용)
 
 // --- 더미 스크립트 (녹음 중 보여줄 내용) ---
@@ -55,6 +60,21 @@ interface AudioItem {
   size: number; // 바이트 단위
   previewUrl: string | null;
 }
+
+type VoiceCloningWebViewMessage =
+  | {
+      type: 'VOICE_CLONING_RECORDING_RESULT';
+      payload?: {
+        dataUrl?: string;
+        base64?: string;
+        mimeType?: string;
+        fileName?: string;
+      };
+    }
+  | {
+      type: 'VOICE_CLONING_RECORDING_ERROR';
+      payload?: { message?: string };
+    };
 
 type TagOption = {
   label: string;
@@ -213,6 +233,8 @@ export default function VoiceCloningPage() {
   const audioChunksRef = useRef<Blob[]>([]);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  const isRnWebView = useMemo(() => isReactNativeWebView(), []);
+
   // 녹음 타이머 관리
   useEffect(() => {
     if (isRecording) {
@@ -351,8 +373,90 @@ export default function VoiceCloningPage() {
     [audioList],
   );
 
+  // 앱에서 받은 음성 파일을 처리하는 경우
+  const handleWebViewRecordingResult = useCallback(
+    async (msg: VoiceCloningWebViewMessage) => {
+      if (msg.type !== 'VOICE_CLONING_RECORDING_RESULT') return;
+
+      const payload = msg.payload ?? {};
+      const mimeType = payload.mimeType || 'audio/wav';
+      const fileName =
+        payload.fileName ||
+        `recording_${Date.now()}.${mimeType.split('/')[1] || 'wav'}`;
+
+      let blob: Blob | null = null;
+      if (payload.dataUrl && payload.dataUrl.startsWith('data:')) {
+        const match = payload.dataUrl.match(/^data:([^;]+);base64,(.*)$/);
+        if (match) {
+          const mt = match[1] || mimeType;
+          const b64 = match[2];
+          blob = base64ToBlob(b64, mt);
+        }
+      } else if (payload.base64) {
+        blob = base64ToBlob(payload.base64, mimeType);
+      }
+
+      if (!blob) {
+        alert('녹음 파일을 불러오지 못했습니다.');
+        setIsRecording(false);
+        setRecordingTime(0);
+        return;
+      }
+
+      const recordedFile = new File([blob], fileName, { type: blob.type });
+      await validateAndAddAudio(recordedFile);
+      setIsRecording(false);
+      setRecordingTime(0);
+    },
+    [validateAndAddAudio],
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handler = (event: MessageEvent) => {
+      const raw = event.data;
+      if (typeof raw !== 'string') return;
+
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw) as unknown;
+      } catch {
+        return;
+      }
+
+      if (!parsed || typeof parsed !== 'object') return;
+      const type = (parsed as { type?: unknown }).type;
+      if (type === 'VOICE_CLONING_RECORDING_RESULT') {
+        void handleWebViewRecordingResult(parsed as VoiceCloningWebViewMessage);
+        return;
+      }
+      if (type === 'VOICE_CLONING_RECORDING_ERROR') {
+        const message =
+          (parsed as { payload?: { message?: string } }).payload?.message ||
+          '녹음에 실패했습니다.';
+        alert(message);
+        setIsRecording(false);
+        setRecordingTime(0);
+      }
+    };
+
+    window.addEventListener('message', handler);
+    document.addEventListener('message' as never, handler as never);
+    return () => {
+      window.removeEventListener('message', handler);
+      document.removeEventListener('message' as never, handler as never);
+    };
+  }, [handleWebViewRecordingResult]);
+
   // --- 마이크 녹음 시작/중단 로직 ---
   const startRecording = async () => {
+    if (isRnWebView) {
+      postToReactNativeWebView({ type: 'VOICE_CLONING_RECORDING_START' });
+      setIsRecording(true);
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream);
@@ -381,6 +485,10 @@ export default function VoiceCloningPage() {
   };
 
   const stopRecording = () => {
+    if (isRnWebView) {
+      postToReactNativeWebView({ type: 'VOICE_CLONING_RECORDING_STOP' });
+      return;
+    }
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
@@ -731,7 +839,7 @@ export default function VoiceCloningPage() {
                       *참고: 최소 10초, 최대 210초 권장
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 text-xs font-semibold px-3 py-1 bg-[#FFFBEB] text-[#D97706] rounded-full">
+                  <div className="flex items-center gap-2 text-xs font-semibold px-3 py-1 bg-[#FFFBEB] text-[#D97706] rounded-full shrink-0">
                     <span>⚠️</span> 추천 30초 ~ 90초
                   </div>
                 </div>
@@ -753,13 +861,13 @@ export default function VoiceCloningPage() {
                     {audioList.map(item => (
                       <div
                         key={item.id}
-                        className="bg-white p-4 rounded-xl border border-zinc-100 flex items-center gap-4 hover:shadow-sm transition"
+                        className="bg-white p-2 sm:p-4 rounded-xl border border-zinc-100 flex items-center gap-4 hover:shadow-sm transition"
                       >
                         <div className="w-10 h-10 bg-zinc-50 rounded-lg flex items-center justify-center text-zinc-400 border border-zinc-100">
                           <span className="text-lg">📄</span>
                         </div>
                         <div className="flex-1 flex flex-col">
-                          <span className="text-sm font-semibold text-zinc-800 truncate">
+                          <span className="text-sm font-semibold text-zinc-800 truncate max-w-[130px] sm:max-w-full">
                             {item.file.name}
                           </span>
                           <div className="flex items-center gap-2 text-xs text-zinc-400 mt-1 font-mono">
@@ -768,7 +876,7 @@ export default function VoiceCloningPage() {
                             <span>{formatDuration(item.duration)}</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                           <button
                             onClick={() => {
                               playPreview(item);
@@ -1067,19 +1175,18 @@ export default function VoiceCloningPage() {
                       )}
                     </div>
                     <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <div className="text-sm font-bold text-zinc-900">
-                          {modelTitle.trim() || '이름 없음'}
-                        </div>
-                        <span className="text-xs text-zinc-500">
-                          @ {visibility}
-                        </span>
+                      {/* <div className="flex items-center gap-2"> */}
+                      <div className="text-sm font-bold text-zinc-900">
+                        {modelTitle.trim() || '이름 없음'}
                       </div>
                       {modelDescription.trim() && (
                         <div className="text-xs text-zinc-500 mt-1 line-clamp-2">
                           {modelDescription.trim()}
                         </div>
                       )}
+                      <span className="text-xs text-zinc-500">
+                        @ {visibility}
+                      </span>
                       <div className="flex flex-wrap gap-1 mt-2">
                         {previewTags.map(t => (
                           <span
@@ -1140,4 +1247,7 @@ export default function VoiceCloningPage() {
       </div>
     </div>
   );
+}
+{
+  /* </div> */
 }
