@@ -2,11 +2,11 @@
 
 import { BASIC_TEXT } from '@/src/constants/text_contents/basic_text';
 import { transformTiptapToFishAudio } from '@/src/utils/voice';
+import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 
 export default function FishAudioPage() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState('');
   const [phase, setPhase] = useState<
     'idle' | 'fetching' | 'merging' | 'done' | 'error'
@@ -18,17 +18,11 @@ export default function FishAudioPage() {
   const progressPercent =
     totalCount === 0 ? 0 : Math.round((completedCount / totalCount) * 100);
 
-  const generateFullAudio = async () => {
-    setIsLoading(true);
-    setStatus('문단 데이터를 분석 중...');
-    setPhase('fetching');
-    setCompletedCount(0);
-
-    try {
+  const generateFullAudioMutation = useMutation({
+    mutationFn: async () => {
       const chunks: Uint8Array[] = [];
       setStatus(`${tasks.length}개의 문단을 합치는 중... 잠시만 기다려주세요.`);
 
-      // 문단별로 우리 API 호출
       let localCompleted = 0;
       for (let i = 0; i < tasks.length; i++) {
         const task = tasks[i];
@@ -40,14 +34,13 @@ export default function FishAudioPage() {
           },
           body: JSON.stringify({
             text: task.text,
-            voiceId: '5eaa94d0873846368b8bebf6f6918cef', // 실제 Voice ID
+            voiceId: '5eaa94d0873846368b8bebf6f6918cef',
             prosody: task.prosody,
           }),
         });
 
         if (!response.ok) throw new Error('API 호출 실패');
 
-        // 스트림 읽기
         const reader = response.body?.getReader();
         if (reader) {
           while (true) {
@@ -61,24 +54,31 @@ export default function FishAudioPage() {
         setCompletedCount(localCompleted);
       }
 
-      // 최종 Blob 생성 및 재생
       setPhase('merging');
       setStatus('오디오 파일을 하나로 합치는 중...');
       const finalBlob = new Blob(chunks as unknown as BlobPart[], {
         type: 'audio/mpeg',
       });
-      // TODO: 백엔드 전송을 위한 코드 필요함
+      return finalBlob;
+    },
+    onMutate: () => {
+      setStatus('문단 데이터를 분석 중...');
+      setPhase('fetching');
+      setCompletedCount(0);
+    },
+    onSuccess: finalBlob => {
       if (audioUrl) URL.revokeObjectURL(audioUrl);
       setAudioUrl(URL.createObjectURL(finalBlob));
       setPhase('done');
       setStatus('생성 완료! 재생 버튼을 눌러보세요.');
-    } catch (err) {
+    },
+    onError: err => {
       console.error(err);
+      setPhase('error');
+      setStatus('생성 실패!');
       alert('생성 실패!');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+  });
 
   return (
     <div className="max-w-2xl mx-auto p-4 font-sans sm:p-6 lg:p-10">
@@ -109,15 +109,15 @@ export default function FishAudioPage() {
         {/* 컨트롤 섹션 */}
         <div className="flex flex-col items-center gap-4">
           <button
-            onClick={generateFullAudio}
-            disabled={isLoading}
+            onClick={() => void generateFullAudioMutation.mutateAsync()}
+            disabled={generateFullAudioMutation.isPending}
             className={`w-full py-4 rounded-xl font-bold text-white transition-all ${
-              isLoading
+              generateFullAudioMutation.isPending
                 ? 'bg-zinc-400 cursor-not-allowed'
                 : 'bg-blue-600 hover:bg-blue-700 shadow-lg'
             }`}
           >
-            {isLoading ? (
+            {generateFullAudioMutation.isPending ? (
               <span className="flex items-center justify-center gap-2">
                 <span className="animate-spin">⏳</span> 생성 중...
               </span>
@@ -126,7 +126,7 @@ export default function FishAudioPage() {
             )}
           </button>
 
-          {isLoading && (
+          {generateFullAudioMutation.isPending && (
             <div className="w-full">
               <div className="flex justify-between text-xs text-zinc-500 mb-2">
                 <span>

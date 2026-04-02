@@ -105,6 +105,9 @@ export default function CreateAudiobookPage() {
   const [voiceLoadingMore, setVoiceLoadingMore] = useState(false);
   const voiceSentinelRef = useRef<HTMLDivElement | null>(null);
 
+  const didInitialVoicesFetchRef = useRef(false);
+  const didUserScrollVoicesRef = useRef(false);
+
   const [isContentModalOpen, setIsContentModalOpen] = useState(false);
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
 
@@ -242,6 +245,10 @@ export default function CreateAudiobookPage() {
   }, []);
 
   useEffect(() => {
+    if (!isVoiceModalOpen) return;
+    if (didInitialVoicesFetchRef.current) return;
+    didInitialVoicesFetchRef.current = true;
+
     let cancelled = false;
 
     const run = async () => {
@@ -266,7 +273,7 @@ export default function CreateAudiobookPage() {
     return () => {
       cancelled = true;
     };
-  }, [fetchVoicesPage]);
+  }, [fetchVoicesPage, isVoiceModalOpen]);
 
   const voiceHasMore = useMemo(() => {
     if (voiceTotal == null) return true;
@@ -299,6 +306,7 @@ export default function CreateAudiobookPage() {
 
     const io = new IntersectionObserver(entries => {
       const first = entries[0];
+      if (!didUserScrollVoicesRef.current) return;
       if (first?.isIntersecting) {
         void loadMoreVoices();
       }
@@ -314,6 +322,11 @@ export default function CreateAudiobookPage() {
     if (!isVoiceModalOpen) return;
     setTempVoiceId(voiceId);
   }, [isVoiceModalOpen, voiceId]);
+
+  useEffect(() => {
+    if (!isVoiceModalOpen) return;
+    didUserScrollVoicesRef.current = false;
+  }, [isVoiceModalOpen]);
 
   const startCreate = async () => {
     try {
@@ -442,10 +455,10 @@ export default function CreateAudiobookPage() {
           <Breadcrumbs
             items={[
               { label: '오디오북', href: '/audiobooks' },
-              { label: '만들기' },
+              { label: '오디오북 생성' },
             ]}
           />
-          <h1 className="text-2xl font-bold text-zinc-900">오디오북 만들기</h1>
+          <h1 className="text-2xl font-bold text-zinc-900">오디오북 생성</h1>
           <p className="text-sm text-zinc-500 mt-2">
             콘텐츠와 보이스를 선택하고 오디오북 생성을 시작합니다.
           </p>
@@ -598,7 +611,12 @@ export default function CreateAudiobookPage() {
               </div>
             </div>
 
-            <div className="max-h-[60vh] overflow-auto p-3">
+            <div
+              className="max-h-[60vh] overflow-auto p-3"
+              onScroll={() => {
+                didUserScrollVoicesRef.current = true;
+              }}
+            >
               {voiceModalItems.length === 0 ? (
                 <div className="p-4 text-sm text-zinc-500">
                   검색 결과가 없습니다.

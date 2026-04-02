@@ -1,38 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export const runtime = 'nodejs';
+import {
+  fishAudioRequest,
+  getFishAudioApiKeyOrResponse,
+} from '@/src/server/fishAudio';
 
-function getApiKey() {
-  return process.env.FISH_AUDIO_API_KEY;
-}
+export const runtime = 'nodejs';
 
 export async function GET(
   _req: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: 'Missing FISH_AUDIO_API_KEY' },
-      { status: 500 },
-    );
-  }
+  const apiKeyResult = getFishAudioApiKeyOrResponse();
+  if (!apiKeyResult.ok) return apiKeyResult.response;
+  const { apiKey } = apiKeyResult;
 
   const { id } = await context.params;
-  const response = await fetch(
-    `https://api.fish.audio/model/${encodeURIComponent(id)}`,
-    {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
-    },
-  );
+  const upstreamRes = await fishAudioRequest(apiKey, {
+    method: 'GET',
+    url: `/model/${encodeURIComponent(id)}`,
+    responseType: 'text',
+  });
 
-  const text = await response.text();
-  if (!response.ok) {
+  const text =
+    typeof upstreamRes.data === 'string'
+      ? upstreamRes.data
+      : JSON.stringify(upstreamRes.data);
+
+  if (upstreamRes.status < 200 || upstreamRes.status >= 300) {
     return new NextResponse(text, {
-      status: response.status,
+      status: upstreamRes.status,
       headers: { 'Content-Type': 'application/json' },
     });
   }
@@ -47,13 +44,9 @@ export async function PATCH(
   req: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: 'Missing FISH_AUDIO_API_KEY' },
-      { status: 500 },
-    );
-  }
+  const apiKeyResult = getFishAudioApiKeyOrResponse();
+  if (!apiKeyResult.ok) return apiKeyResult.response;
+  const { apiKey } = apiKeyResult;
 
   const { id } = await context.params;
   const contentType = req.headers.get('content-type') || '';
@@ -76,15 +69,22 @@ export async function PATCH(
     requestInit.body = JSON.stringify(body);
   }
 
-  const response = await fetch(
-    `https://api.fish.audio/model/${encodeURIComponent(id)}`,
-    requestInit,
-  );
+  const upstreamRes = await fishAudioRequest(apiKey, {
+    method: 'PATCH',
+    url: `/model/${encodeURIComponent(id)}`,
+    headers: requestInit.headers as Record<string, string>,
+    data: requestInit.body,
+    responseType: 'text',
+  });
 
-  const text = await response.text();
-  if (!response.ok) {
+  const text =
+    typeof upstreamRes.data === 'string'
+      ? upstreamRes.data
+      : JSON.stringify(upstreamRes.data);
+
+  if (upstreamRes.status < 200 || upstreamRes.status >= 300) {
     return new NextResponse(text, {
-      status: response.status,
+      status: upstreamRes.status,
       headers: { 'Content-Type': 'application/json' },
     });
   }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { listAudiobooks, type Audiobook } from '@/src/api/audiobook';
@@ -12,6 +12,8 @@ export function AudiobooksPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialContentId = searchParams.get('contentId') ?? '';
+
+  const didInitialFetchRef = useRef(false);
 
   const [phase, setPhase] = useState<Phase>('idle');
   const [items, setItems] = useState<Audiobook[]>([]);
@@ -35,10 +37,13 @@ export function AudiobooksPageClient() {
   }, []);
 
   useEffect(() => {
+    if (initialContentId) return;
+    if (didInitialFetchRef.current) return;
+    didInitialFetchRef.current = true;
     Promise.resolve().then(() => {
       void refresh();
     });
-  }, [refresh]);
+  }, [initialContentId, refresh]);
 
   useEffect(() => {
     if (!initialContentId) return;
@@ -63,7 +68,7 @@ export function AudiobooksPageClient() {
           onClick={() => router.push('/audiobooks/create')}
           className="px-5 py-2.5 rounded-2xl bg-zinc-800 text-white text-sm font-bold hover:bg-zinc-800"
         >
-          오디오북 만들기
+          오디오북 생성
         </button>
       </div>
 

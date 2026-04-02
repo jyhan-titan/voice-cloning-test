@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export const runtime = 'nodejs';
+import {
+  fishAudioRequest,
+  getFishAudioApiKeyOrResponse,
+} from '@/src/server/fishAudio';
+import { buildQueryString } from '@/src/utils/queryString';
 
-function getApiKey() {
-  return process.env.FISH_AUDIO_API_KEY;
-}
+export const runtime = 'nodejs';
 
 type ModelItem = {
   _id?: string;
@@ -22,36 +24,36 @@ type ListModelsResponse = {
 };
 
 export async function GET(req: NextRequest) {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: 'Missing FISH_AUDIO_API_KEY' },
-      { status: 500 },
-    );
-  }
+  const apiKeyResult = getFishAudioApiKeyOrResponse();
+  if (!apiKeyResult.ok) return apiKeyResult.response;
+  const { apiKey } = apiKeyResult;
 
   const url = new URL(req.url);
   const pageSize = url.searchParams.get('page_size') ?? '5';
   const pageNumber = url.searchParams.get('page_number') ?? '1';
   const self = url.searchParams.get('self');
 
-  const baseUrl = 'https://api.fish.audio/model';
-
   // Pass-through mode: /api/fish-audio-models?self=true|false
   if (self === 'true' || self === 'false') {
-    const upstreamUrl = new URL(baseUrl);
-    upstreamUrl.searchParams.set('page_size', pageSize);
-    upstreamUrl.searchParams.set('page_number', pageNumber);
-    if (self === 'true') upstreamUrl.searchParams.set('self', 'true');
-    if (self === 'true') upstreamUrl.searchParams.set('sort_by', 'created_at');
-
-    const upstreamRes = await fetch(upstreamUrl.toString(), {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${apiKey}` },
+    const upstreamQueryString = buildQueryString({
+      page_size: pageSize,
+      page_number: pageNumber,
+      self: self === 'true' ? true : undefined,
+      sort_by: self === 'true' ? 'created_at' : undefined,
     });
 
-    const upstreamText = await upstreamRes.text();
-    if (!upstreamRes.ok) {
+    const upstreamRes = await fishAudioRequest(apiKey, {
+      method: 'GET',
+      url: `/model?${upstreamQueryString}`,
+      responseType: 'text',
+    });
+
+    const upstreamText =
+      typeof upstreamRes.data === 'string'
+        ? upstreamRes.data
+        : JSON.stringify(upstreamRes.data);
+
+    if (upstreamRes.status < 200 || upstreamRes.status >= 300) {
       return new NextResponse(upstreamText, {
         status: upstreamRes.status,
         headers: { 'Content-Type': 'application/json' },
@@ -68,17 +70,25 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const selfRes = await fetch(
-    `${baseUrl}?self=true&sort_by=created_at&page_size=${encodeURIComponent(pageSize)}&page_number=${encodeURIComponent(pageNumber)}`,
-    {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${apiKey}` },
-    },
-  );
+  const selfQueryString = buildQueryString({
+    self: true,
+    sort_by: 'created_at',
+    page_size: pageSize,
+    page_number: pageNumber,
+  });
 
-  const selfText = await selfRes.text();
+  const selfRes = await fishAudioRequest(apiKey, {
+    method: 'GET',
+    url: `/model?${selfQueryString}`,
+    responseType: 'text',
+  });
 
-  if (!selfRes.ok) {
+  const selfText =
+    typeof selfRes.data === 'string'
+      ? selfRes.data
+      : JSON.stringify(selfRes.data);
+
+  if (selfRes.status < 200 || selfRes.status >= 300) {
     return new NextResponse(selfText, {
       status: selfRes.status,
       headers: { 'Content-Type': 'application/json' },

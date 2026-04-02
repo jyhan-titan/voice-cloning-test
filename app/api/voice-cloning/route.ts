@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import {
+  fishAudioRequest,
+  getFishAudioApiKeyOrResponse,
+} from '@/src/server/fishAudio';
+
 export async function POST(req: NextRequest) {
   try {
+    const apiKeyResult = getFishAudioApiKeyOrResponse();
+    if (!apiKeyResult.ok) return apiKeyResult.response;
+    const { apiKey } = apiKeyResult;
+
     const formData = await req.formData();
     const files = formData.getAll('files') as File[];
     const modelTitle = (formData.get('title') as string) || '';
@@ -48,24 +57,21 @@ export async function POST(req: NextRequest) {
       fishFormData.append('cover_image', coverImage);
     }
 
-    const response = await fetch('https://api.fish.audio/model', {
-      // 경로가 /v1/models가 아니라 /model이네요!
+    const upstreamRes = await fishAudioRequest(apiKey, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.FISH_AUDIO_API_KEY}`,
-        // multipart/form-data는 fetch가 자동으로 Boundary를 설정하게 둡니다.
-      },
-      body: fishFormData,
+      url: '/model',
+      data: fishFormData,
+      headers: {},
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      return NextResponse.json(errorData, { status: response.status });
+    if (upstreamRes.status < 200 || upstreamRes.status >= 300) {
+      return NextResponse.json(upstreamRes.data, {
+        status: upstreamRes.status,
+      });
     }
 
-    const result = await response.json();
+    const result = upstreamRes.data;
 
-    // 문서상 응답 필드는 _id 입니다.
     return NextResponse.json({ id: result._id, ...result }, { status: 201 });
   } catch (error) {
     console.error('Cloning Error:', error);

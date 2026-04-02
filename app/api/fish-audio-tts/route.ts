@@ -1,32 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import {
+  fishAudioRequest,
+  getFishAudioApiKeyOrResponse,
+} from '@/src/server/fishAudio';
+
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
   try {
-    const apiKey = process.env.FISH_AUDIO_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: 'Missing FISH_AUDIO_API_KEY' },
-        { status: 500 },
-      );
-    }
+    const apiKeyResult = getFishAudioApiKeyOrResponse();
+    if (!apiKeyResult.ok) return apiKeyResult.response;
+    const { apiKey } = apiKeyResult;
 
-    const body = (await req.json()) as Record<string, unknown>;
+    const payload = (await req.json()) as Record<string, unknown>;
 
     // Backward compatibility: allow clients to send `voiceId`.
     // Fish Audio expects `reference_id` (string | string[]).
-    const { voiceId, reference_id, ...rest } = body;
+    const { voiceId, reference_id, ...rest } = payload;
     const finalReferenceId = (reference_id ?? voiceId) as unknown;
 
-    const response = await fetch('https://api.fish.audio/v1/tts', {
+    const upstreamRes = await fishAudioRequest(apiKey, {
       method: 'POST',
+      url: '/v1/tts',
       headers: {
         model: 's2-pro',
-        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
+      data: {
         ...rest,
         ...(finalReferenceId != null
           ? { reference_id: finalReferenceId }
@@ -34,18 +35,27 @@ export async function POST(req: NextRequest) {
         format: 'mp3',
         mp3_bitrate: 128,
         latency: 'normal',
-      }),
+      },
+      responseType: 'arraybuffer',
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
+    if (upstreamRes.status < 200 || upstreamRes.status >= 300) {
+      const errorText =
+        upstreamRes.data instanceof ArrayBuffer
+          ? new TextDecoder().decode(new Uint8Array(upstreamRes.data))
+          : String(upstreamRes.data ?? '');
       return NextResponse.json(
         { error: errorText },
-        { status: response.status },
+        { status: upstreamRes.status },
       );
     }
 
-    return new NextResponse(response.body, {
+    const mp3Bytes =
+      upstreamRes.data instanceof ArrayBuffer
+        ? new Uint8Array(upstreamRes.data)
+        : new Uint8Array();
+
+    return new NextResponse(mp3Bytes, {
       headers: {
         'Content-Type': 'audio/mpeg',
       },

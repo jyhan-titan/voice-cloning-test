@@ -8,6 +8,7 @@ import React, {
   useMemo,
 } from 'react';
 import { useRouter } from 'next/navigation';
+import { useMutation } from '@tanstack/react-query';
 import AudioLoading from '@/src/components/loading/AudioLoading';
 import Breadcrumbs from '@/src/components/navigation/Breadcrumbs';
 // import { extractTextFromNode, TiptapNode } from '@/utils/voice'; // Tiptap 유틸 (사용자 데이터용)
@@ -79,7 +80,6 @@ export default function VoiceCloningPage() {
     '/default_audio_thumbnail.png',
   );
   const [coverPreviewIsObjectUrl, setCoverPreviewIsObjectUrl] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [playingItemId, setPlayingItemId] = useState<string | null>(null);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
@@ -221,7 +221,6 @@ export default function VoiceCloningPage() {
       }, 1000);
     } else {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-      setRecordingTime(0);
     }
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
@@ -385,6 +384,7 @@ export default function VoiceCloningPage() {
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      setRecordingTime(0);
     }
   };
 
@@ -400,9 +400,41 @@ export default function VoiceCloningPage() {
     setStep(2);
   };
 
-  const createModel = async () => {
-    setSaveError(null);
+  const createModelMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      const res = await fetch('/api/voice-cloning', {
+        method: 'POST',
+        body: formData,
+      });
 
+      const data = (await res.json()) as unknown;
+      if (!res.ok) {
+        const getStringField = (obj: unknown, key: string) => {
+          if (!obj || typeof obj !== 'object') return undefined;
+          const value = (obj as Record<string, unknown>)[key];
+          return typeof value === 'string' ? value : undefined;
+        };
+
+        const errorMessage = Array.isArray(data)
+          ? (() => {
+              const first = data[0] as unknown;
+              const msg = getStringField(first, 'msg');
+              return msg;
+            })()
+          : getStringField(data, 'message');
+
+        const errorFallback = getStringField(data, 'error');
+        throw new Error(errorMessage || errorFallback || '생성 실패');
+      }
+
+      return data as { _id?: string; id?: string } & Record<string, unknown>;
+    },
+    onMutate: () => {
+      setSaveError(null);
+    },
+  });
+
+  const createModel = async () => {
     const totalDuration = audioList.reduce(
       (acc, curr) => acc + curr.duration,
       0,
@@ -422,7 +454,6 @@ export default function VoiceCloningPage() {
       return;
     }
 
-    setIsSaving(true);
     try {
       const formData = new FormData();
       audioList.forEach(item => {
@@ -435,23 +466,12 @@ export default function VoiceCloningPage() {
       formData.append('enhance_audio_quality', 'true');
       if (coverFile) formData.append('cover_image', coverFile);
 
-      const res = await fetch('/api/voice-cloning', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        const errorMessage = Array.isArray(data) ? data[0]?.msg : data?.message;
-        throw new Error(errorMessage || data?.error || '생성 실패');
-      }
-
-      setClonedVoiceId(data._id || data.id);
+      const data = await createModelMutation.mutateAsync(formData);
+      const nextId = data._id || data.id;
+      setClonedVoiceId(typeof nextId === 'string' ? nextId : null);
       setSuccessModalOpen(true);
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : '생성 실패');
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -464,7 +484,7 @@ export default function VoiceCloningPage() {
 
   return (
     <div className="max-w-5xl mx-auto p-4 bg-[#F9FAFB] font-sans sm:p-6 lg:p-10">
-      {isSaving && (
+      {createModelMutation.isPending && (
         <AudioLoading>
           <div className="text-lg font-semibold text-zinc-900">
             보이스 생성 중...
@@ -1098,15 +1118,19 @@ export default function VoiceCloningPage() {
                 <div className="flex justify-end">
                   <button
                     type="button"
-                    disabled={isSaving || !agree || !modelTitle}
+                    disabled={
+                      createModelMutation.isPending || !agree || !modelTitle
+                    }
                     onClick={createModel}
                     className={`px-6 py-3 rounded-2xl font-bold text-sm transition ${
-                      isSaving || !agree || !modelTitle
+                      createModelMutation.isPending || !agree || !modelTitle
                         ? 'bg-zinc-200 text-zinc-500 cursor-not-allowed'
                         : 'bg-zinc-900 text-white hover:bg-zinc-800'
                     }`}
                   >
-                    {isSaving ? '보이스 생성 중...' : '보이스 클로닝'}
+                    {createModelMutation.isPending
+                      ? '보이스 생성 중...'
+                      : '보이스 클로닝'}
                   </button>
                 </div>
               </div>

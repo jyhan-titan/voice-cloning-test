@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { useInfiniteQuery } from '@tanstack/react-query';
 
 type ModelItem = {
   _id?: string;
@@ -22,24 +23,10 @@ export function VoicesPageClient() {
 
   const pageSize = 10;
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const [customItems, setCustomItems] = useState<ModelItem[]>([]);
-  const [customTotal, setCustomTotal] = useState<number | null>(null);
-  const [customPage, setCustomPage] = useState(1);
-  const [customLoadingMore, setCustomLoadingMore] = useState(false);
-
-  const [defaultItems, setDefaultItems] = useState<ModelItem[]>([]);
-  const [defaultTotal, setDefaultTotal] = useState<number | null>(null);
-  const [defaultPage, setDefaultPage] = useState(1);
-  const [defaultLoadingMore, setDefaultLoadingMore] = useState(false);
-
   const [playingModelId, setPlayingModelId] = useState<string | null>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const currentAudioModelIdRef = useRef<string | null>(null);
 
-  const customIdSetRef = useRef<Set<string>>(new Set());
   const customSentinelRef = useRef<HTMLDivElement | null>(null);
   const defaultSentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -127,18 +114,6 @@ export function VoicesPageClient() {
     [getFirstSampleUrl, stopCurrentSample],
   );
 
-  const mergeCustomIds = useCallback((items: ModelItem[]) => {
-    const set = customIdSetRef.current;
-    for (const it of items) {
-      if (it._id) set.add(it._id);
-    }
-  }, []);
-
-  const filterDefaultItems = useCallback((items: ModelItem[]) => {
-    const set = customIdSetRef.current;
-    return items.filter(it => (it._id ? !set.has(it._id) : true));
-  }, []);
-
   const fetchModelsPage = useCallback(
     async (opts: { self: boolean; page: number }) => {
       const params = new URLSearchParams();
@@ -169,136 +144,85 @@ export function VoicesPageClient() {
     [],
   );
 
-  const reloadCurrentTab = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  const activeTab = tab;
+  const isCustomTab = activeTab === 'custom';
+  const isDefaultTab = activeTab === 'default';
+  const listQueryStaleTime = 5 * 60_000;
 
-    if (tab === 'custom') {
-      setCustomItems([]);
-      setCustomTotal(null);
-      setCustomPage(1);
-      customIdSetRef.current = new Set();
+  const customQuery = useInfiniteQuery({
+    queryKey: ['fish-audio-models', 'custom', pageSize],
+    initialPageParam: 1,
+    enabled: isCustomTab,
+    queryFn: ({ pageParam }) =>
+      fetchModelsPage({ self: true, page: Number(pageParam) || 1 }),
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.reduce((acc, p) => acc + p.items.length, 0);
+      if (lastPage.total != null && loaded >= lastPage.total) return undefined;
+      return allPages.length + 1;
+    },
+    staleTime: listQueryStaleTime,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+  });
 
-      try {
-        const customFirst = await fetchModelsPage({ self: true, page: 1 });
-        mergeCustomIds(customFirst.items);
-        setCustomItems(customFirst.items);
-        setCustomTotal(customFirst.total);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : '불러오기 실패');
-      } finally {
-        setIsLoading(false);
+  const customIds = useMemo(() => {
+    const set = new Set<string>();
+    const pages = customQuery.data?.pages ?? [];
+    for (const p of pages) {
+      for (const it of p.items) {
+        if (it._id) set.add(it._id);
       }
-      return;
     }
+    return set;
+  }, [customQuery.data?.pages]);
 
-    // tab === 'default'
-    setDefaultItems([]);
-    setDefaultTotal(null);
-    setDefaultPage(1);
+  const defaultQuery = useInfiniteQuery({
+    queryKey: ['fish-audio-models', 'default', pageSize],
+    initialPageParam: 1,
+    enabled: isDefaultTab,
+    queryFn: ({ pageParam }) =>
+      fetchModelsPage({ self: false, page: Number(pageParam) || 1 }),
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.reduce((acc, p) => acc + p.items.length, 0);
+      if (lastPage.total != null && loaded >= lastPage.total) return undefined;
+      return allPages.length + 1;
+    },
+    staleTime: listQueryStaleTime,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+  });
 
-    try {
-      // default 탭은 custom id set이 있어야 커스텀 모델을 제외할 수 있음
-      if (customIdSetRef.current.size === 0) {
-        const customFirst = await fetchModelsPage({ self: true, page: 1 });
-        mergeCustomIds(customFirst.items);
-        setCustomItems(customFirst.items);
-        setCustomTotal(customFirst.total);
-        setCustomPage(1);
-      }
+  const customItems = useMemo(() => {
+    return (customQuery.data?.pages ?? []).flatMap(p => p.items);
+  }, [customQuery.data?.pages]);
 
-      const defaultFirst = await fetchModelsPage({ self: false, page: 1 });
-      const filteredDefault = filterDefaultItems(defaultFirst.items);
-      setDefaultItems(filteredDefault);
-      setDefaultTotal(defaultFirst.total);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '불러오기 실패');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [fetchModelsPage, filterDefaultItems, mergeCustomIds, tab]);
+  const customTotal = useMemo(() => {
+    const first = customQuery.data?.pages?.[0];
+    return first?.total ?? null;
+  }, [customQuery.data?.pages]);
 
-  useEffect(() => {
-    void reloadCurrentTab();
-  }, [reloadCurrentTab]);
+  const defaultItems = useMemo(() => {
+    const items = (defaultQuery.data?.pages ?? []).flatMap(p => p.items);
+    return items.filter(it => (it._id ? !customIds.has(it._id) : true));
+  }, [customIds, defaultQuery.data?.pages]);
+
+  const defaultTotal = useMemo(() => {
+    const first = defaultQuery.data?.pages?.[0];
+    return first?.total ?? null;
+  }, [defaultQuery.data?.pages]);
+
+  const error = (
+    isCustomTab ? customQuery.error : defaultQuery.error
+  ) as unknown;
+  const errorMessage =
+    error instanceof Error ? error.message : error ? '불러오기 실패' : null;
+
+  const isLoading = isCustomTab
+    ? customQuery.isLoading
+    : defaultQuery.isLoading;
 
   const customTitle = '커스텀 보이스';
   const defaultTitle = '기본 보이스';
-
-  const customHasMore = useMemo(() => {
-    if (customTotal == null) return true;
-    return customItems.length < customTotal;
-  }, [customItems.length, customTotal]);
-
-  const defaultHasMore = useMemo(() => {
-    if (defaultTotal == null) return true;
-    return defaultItems.length < defaultTotal;
-  }, [defaultItems.length, defaultTotal]);
-
-  const loadMoreCustom = useCallback(async () => {
-    if (isLoading || customLoadingMore || !customHasMore) return;
-    setCustomLoadingMore(true);
-    try {
-      const nextPage = customPage + 1;
-      const next = await fetchModelsPage({ self: true, page: nextPage });
-      mergeCustomIds(next.items);
-      setCustomTotal(next.total);
-      setCustomItems(prev => {
-        const merged = [...prev, ...next.items];
-        return merged;
-      });
-      // custom이 늘어났으면 default에서 해당 id 제거
-      setDefaultItems(prev => filterDefaultItems(prev));
-      setCustomPage(nextPage);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '불러오기 실패');
-    } finally {
-      setCustomLoadingMore(false);
-    }
-  }, [
-    customHasMore,
-    customLoadingMore,
-    customPage,
-    fetchModelsPage,
-    filterDefaultItems,
-    isLoading,
-    mergeCustomIds,
-  ]);
-
-  const loadMoreDefault = useCallback(async () => {
-    if (isLoading || defaultLoadingMore || !defaultHasMore) return;
-    setDefaultLoadingMore(true);
-    try {
-      const nextPage = defaultPage + 1;
-      const next = await fetchModelsPage({ self: false, page: nextPage });
-      setDefaultTotal(next.total);
-      setDefaultItems(prev => {
-        const nextFiltered = filterDefaultItems(next.items);
-        const merged = [...prev, ...nextFiltered];
-
-        // 중복 제거(_id 기준)
-        const seen = new Set<string>();
-        return merged.filter(it => {
-          if (!it._id) return true;
-          if (seen.has(it._id)) return false;
-          seen.add(it._id);
-          return true;
-        });
-      });
-      setDefaultPage(nextPage);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '불러오기 실패');
-    } finally {
-      setDefaultLoadingMore(false);
-    }
-  }, [
-    defaultHasMore,
-    defaultLoadingMore,
-    defaultPage,
-    fetchModelsPage,
-    filterDefaultItems,
-    isLoading,
-  ]);
 
   useEffect(() => {
     const el =
@@ -309,15 +233,21 @@ export function VoicesPageClient() {
       entries => {
         const first = entries[0];
         if (!first?.isIntersecting) return;
-        if (tab === 'custom') void loadMoreCustom();
-        else void loadMoreDefault();
+        if (tab === 'custom') {
+          if (customQuery.hasNextPage && !customQuery.isFetchingNextPage)
+            void customQuery.fetchNextPage();
+          return;
+        }
+
+        if (defaultQuery.hasNextPage && !defaultQuery.isFetchingNextPage)
+          void defaultQuery.fetchNextPage();
       },
       { root: null, rootMargin: '200px', threshold: 0 },
     );
 
     observer.observe(el);
     return () => observer.disconnect();
-  }, [loadMoreCustom, loadMoreDefault, tab]);
+  }, [customQuery, defaultQuery, tab]);
 
   return (
     <div className="min-h-full px-4 py-6 font-sans sm:px-6 sm:py-8 lg:px-8 lg:py-10">
@@ -355,10 +285,6 @@ export function VoicesPageClient() {
                 ? 'bg-zinc-800 text-white'
                 : 'text-zinc-700 hover:bg-zinc-50'
             }`}
-            onClick={e => {
-              e.preventDefault();
-              alert('준비중인 기능입니다.');
-            }}
           >
             {defaultTitle}
           </Link>
@@ -366,17 +292,23 @@ export function VoicesPageClient() {
       </div>
 
       {isLoading && <div className="text-sm text-zinc-500">불러오는 중...</div>}
-      {error && <div className="text-sm text-red-600">{error}</div>}
+      {errorMessage && (
+        <div className="text-sm text-red-600">{errorMessage}</div>
+      )}
 
       {!isLoading && !error && tab === 'custom' && (
         <section className="bg-white rounded-2xl border border-zinc-200 p-6">
           <div className="flex items-end justify-between gap-4">
             <div>
               <h2 className="text-lg font-bold text-zinc-900">{customTitle}</h2>
+              <p className="text-xs text-zinc-500 mt-1">
+                {customItems.length}개
+                {typeof customTotal === 'number' ? ` / ${customTotal}개` : ''}
+              </p>
             </div>
             <button
               type="button"
-              onClick={() => void reloadCurrentTab()}
+              onClick={() => void customQuery.refetch()}
               className="px-3 py-2 rounded-xl border border-zinc-200 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
             >
               새로고침
@@ -443,7 +375,7 @@ export function VoicesPageClient() {
           </div>
 
           <div ref={customSentinelRef} className="h-10" />
-          {customLoadingMore && (
+          {customQuery.isFetchingNextPage && (
             <div className="text-sm text-zinc-500">더 불러오는 중...</div>
           )}
         </section>
@@ -463,7 +395,7 @@ export function VoicesPageClient() {
             </div>
             <button
               type="button"
-              onClick={() => void reloadCurrentTab()}
+              onClick={() => void defaultQuery.refetch()}
               className="px-3 py-2 rounded-xl border border-zinc-200 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
             >
               새로고침
@@ -515,7 +447,7 @@ export function VoicesPageClient() {
           </div>
 
           <div ref={defaultSentinelRef} className="h-10" />
-          {defaultLoadingMore && (
+          {defaultQuery.isFetchingNextPage && (
             <div className="text-sm text-zinc-500">더 불러오는 중...</div>
           )}
         </section>
