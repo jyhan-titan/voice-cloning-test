@@ -28,7 +28,7 @@ export function MobileDrawerNav() {
 
   return (
     <>
-      <header className="sm:hidden sticky top-0 z-40 border-b border-zinc-200 bg-white">
+      <header className="lg:hidden sticky top-0 z-40 border-b border-zinc-200 bg-white">
         <div className="h-14 px-4 flex items-center justify-between gap-3">
           <button
             type="button"
@@ -63,7 +63,7 @@ export function MobileDrawerNav() {
       </header>
 
       <div
-        className={`sm:hidden fixed inset-0 z-50 ${
+        className={`lg:hidden fixed inset-0 z-50 ${
           open ? 'pointer-events-auto' : 'pointer-events-none'
         }`}
         aria-hidden={!open}

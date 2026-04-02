@@ -29,7 +29,7 @@ export function DesktopSidebar() {
 
   return (
     <aside
-      className={`hidden sm:flex shrink-0 border-r border-zinc-200 bg-zinc-800 flex-col transition-[width] duration-200 ${
+      className={`hidden lg:flex shrink-0 border-r border-zinc-200 bg-zinc-800 flex-col transition-[width] duration-200 ${
         collapsed ? 'w-16' : 'w-64'
       }`}
     >

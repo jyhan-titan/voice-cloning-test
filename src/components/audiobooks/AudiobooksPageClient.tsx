@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 import { listAudiobooks, type Audiobook } from '@/src/api/audiobook';
 import { AudiobookListItem } from '@/src/components/audiobooks/AudiobookListItem';
+import TitleHeader from '../header/TitleHeader';
 
 type Phase = 'idle' | 'loading' | 'error';
 
@@ -56,21 +57,14 @@ export function AudiobooksPageClient() {
 
   return (
     <div className="min-h-full px-4 py-6 font-sans sm:px-6 sm:py-8 lg:px-8 lg:py-10">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-zinc-900">오디오북</h1>
-          <p className="text-sm text-zinc-500 mt-2">
-            생성된 오디오북을 관리합니다.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => router.push('/audiobooks/create')}
-          className="px-5 py-2.5 rounded-2xl bg-zinc-800 text-white text-sm font-bold hover:bg-zinc-800"
-        >
-          오디오북 생성
-        </button>
-      </div>
+      <TitleHeader
+        title="오디오북"
+        description="생성된 오디오북을 관리합니다."
+        button={{
+          buttonText: '오디오북 생성',
+          buttonHref: '/audiobooks/create',
+        }}
+      />
 
       <div className="mt-8">
         {isLoading && (

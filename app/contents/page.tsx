@@ -5,19 +5,17 @@ import IconEdit from '@/src/svg/EditIcon';
 import AudiobookOnIcon from '@/src/svg/AudiobookOnIcon';
 import AudiobookOffIcon from '@/src/svg/AudiobookOffIcon';
 import SearchIcon from '@/src/svg/SearchIcon';
+import TitleHeader from '@/src/components/header/TitleHeader';
 
 export default function ContentsPage() {
   const { items } = listContentsSync();
 
   return (
     <div className="min-h-full px-4 py-6 font-sans sm:px-6 sm:py-8 lg:px-8 lg:py-10">
-      <div>
-        <h1 className="text-2xl font-bold text-zinc-900">콘텐츠 관리</h1>
-        <p className="text-sm text-zinc-500 mt-2">
-          콘텐츠를 열람, 수정할 수 있고 오디오북을 생성할 수 있습니다.
-        </p>
-      </div>
-
+      <TitleHeader
+        title="콘텐츠 관리"
+        description="콘텐츠를 열람, 수정할 수 있고 오디오북을 생성할 수 있습니다."
+      />
       <div className="mt-8 rounded-3xl border border-zinc-200 bg-white overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-zinc-50 border-b border-zinc-200">

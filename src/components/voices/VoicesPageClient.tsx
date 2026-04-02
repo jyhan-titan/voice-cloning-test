@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useInfiniteQuery } from '@tanstack/react-query';
+import TitleHeader from '../header/TitleHeader';
 
 type ModelItem = {
   _id?: string;
@@ -251,20 +252,14 @@ export function VoicesPageClient() {
 
   return (
     <div className="min-h-full px-4 py-6 font-sans sm:px-6 sm:py-8 lg:px-8 lg:py-10">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-zinc-900">보이스 관리</h1>
-          <p className="text-sm text-zinc-500 mt-2">
-            생성한 목소리를 확인하고 테스트할 수 있습니다.
-          </p>
-        </div>
-        <Link
-          href="/voices/create"
-          className="px-5 py-2.5 rounded-xl bg-zinc-800 text-white text-sm font-semibold hover:bg-zinc-800"
-        >
-          보이스 생성
-        </Link>
-      </div>
+      <TitleHeader
+        title="보이스 관리"
+        description="생성한 목소리를 확인하고 테스트할 수 있습니다."
+        button={{
+          buttonText: '보이스 생성',
+          buttonHref: '/voices/create',
+        }}
+      />
 
       <div className="mb-8">
         <div className="inline-flex rounded-2xl border border-zinc-200 bg-white p-1">
