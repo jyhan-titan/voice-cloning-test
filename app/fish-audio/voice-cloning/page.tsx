@@ -16,7 +16,7 @@ import {
   postToReactNativeWebView,
 } from '@/src/utils/reactNative';
 import { base64ToBlob } from '@/src/utils/file';
-// import { extractTextFromNode, TiptapNode } from '@/utils/voice'; // Tiptap 유틸 (사용자 데이터용)
+import uploadingAnimation from '@/src/components/lottie/upload_sound.json';
 
 // --- 더미 스크립트 (녹음 중 보여줄 내용) ---
 const RECORDING_SCRIPTS = [
@@ -43,12 +43,43 @@ const formatSize = (bytes: number): string => {
 // --- 오디오 파일의 실제 길이를 측정하는 유틸 함수 ---
 const getAudioDuration = (file: File): Promise<number> => {
   return new Promise(resolve => {
-    const audio = new Audio();
-    audio.src = URL.createObjectURL(file);
-    audio.onloadedmetadata = () => {
-      URL.revokeObjectURL(audio.src);
-      resolve(audio.duration);
+    const url = URL.createObjectURL(file);
+    const isVideo = file.type.startsWith('video/');
+
+    const media: HTMLMediaElement = isVideo
+      ? (document.createElement('video') as HTMLVideoElement)
+      : (new Audio() as HTMLAudioElement);
+
+    const cleanup = () => {
+      URL.revokeObjectURL(url);
+      media.removeAttribute('src');
+      try {
+        media.load();
+      } catch {
+        // ignore
+      }
     };
+
+    const timeoutId = setTimeout(() => {
+      cleanup();
+      resolve(0);
+    }, 7000);
+
+    media.preload = 'metadata';
+    media.onloadedmetadata = () => {
+      clearTimeout(timeoutId);
+      const duration = Number.isFinite(media.duration) ? media.duration : 0;
+      cleanup();
+      resolve(duration);
+    };
+
+    media.onerror = () => {
+      clearTimeout(timeoutId);
+      cleanup();
+      resolve(0);
+    };
+
+    media.src = url;
   });
 };
 
@@ -69,10 +100,25 @@ type VoiceCloningWebViewMessage =
         base64?: string;
         mimeType?: string;
         fileName?: string;
+        durationSec?: number;
+      };
+    }
+  | {
+      type: 'VOICE_CLONING_UPLOAD_RESULT';
+      payload?: {
+        dataUrl?: string;
+        base64?: string;
+        mimeType?: string;
+        fileName?: string;
+        durationSec?: number;
       };
     }
   | {
       type: 'VOICE_CLONING_RECORDING_ERROR';
+      payload?: { message?: string };
+    }
+  | {
+      type: 'VOICE_CLONING_UPLOAD_ERROR';
       payload?: { message?: string };
     };
 
@@ -103,6 +149,7 @@ export default function VoiceCloningPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [playingItemId, setPlayingItemId] = useState<string | null>(null);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [isAppUploading, setIsAppUploading] = useState(false);
 
   const [recordingScript, setRecordingScript] = useState<
     (typeof RECORDING_SCRIPTS)[number]
@@ -232,6 +279,7 @@ export default function VoiceCloningPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const isRnWebView = useMemo(() => isReactNativeWebView(), []);
 
@@ -339,8 +387,29 @@ export default function VoiceCloningPage() {
 
   // --- 오디오 검증 및 추가 로직 ---
   const validateAndAddAudio = useCallback(
-    async (file: File) => {
-      const duration = await getAudioDuration(file);
+    async (file: File, durationOverrideSec?: number) => {
+      const maxBytes = 32 * 1024 * 1024;
+      if (file.size > maxBytes) {
+        alert(
+          `파일 용량이 너무 큽니다. (현재: ${formatSize(file.size)}, 최대: ${formatSize(maxBytes)})`,
+        );
+        return;
+      }
+
+      if (!file.type.startsWith('audio/') && !file.type.startsWith('video/')) {
+        alert('오디오/동영상 파일만 업로드할 수 있습니다.');
+        return;
+      }
+
+      const duration =
+        typeof durationOverrideSec === 'number' && durationOverrideSec > 0
+          ? durationOverrideSec
+          : await getAudioDuration(file);
+
+      if (!Number.isFinite(duration) || duration <= 0) {
+        alert('파일 정보를 읽지 못했습니다. 다른 파일로 시도해주세요.');
+        return;
+      }
 
       // 조건 1: 개별 파일 최소 10초
       if (duration < 10) {
@@ -404,9 +473,54 @@ export default function VoiceCloningPage() {
       }
 
       const recordedFile = new File([blob], fileName, { type: blob.type });
-      await validateAndAddAudio(recordedFile);
+      await validateAndAddAudio(recordedFile, payload.durationSec);
       setIsRecording(false);
       setRecordingTime(0);
+    },
+    [validateAndAddAudio],
+  );
+
+  const handleWebViewUploadResult = useCallback(
+    async (msg: VoiceCloningWebViewMessage) => {
+      if (msg.type !== 'VOICE_CLONING_UPLOAD_RESULT') return;
+
+      try {
+        const { payload } = msg;
+        if (!payload) throw new Error('파일 데이터가 없습니다.');
+
+        const mimeType = payload.mimeType || 'video/mp4';
+        const fileName =
+          payload.fileName ||
+          `upload_${Date.now()}.${mimeType.split('/')[1] || 'mp4'}`;
+
+        let blob: Blob | null = null;
+        if (payload.dataUrl?.startsWith('data:')) {
+          const match = payload.dataUrl.match(/^data:([^;]+);base64,(.*)$/);
+          if (match) blob = base64ToBlob(match[2], match[1] || mimeType);
+        } else if (payload.base64) {
+          blob = base64ToBlob(payload.base64, mimeType);
+        }
+
+        if (!blob) {
+          alert('업로드 파일을 불러오지 못했습니다.');
+          return;
+        }
+
+        const uploadedFile = new File([blob], fileName, { type: blob.type });
+
+        // 유효성 검사 및 리스트 추가 로직 실행 (이 동안 로딩 유지)
+        await validateAndAddAudio(uploadedFile, payload.durationSec);
+      } catch (error) {
+        console.error(error);
+        alert(
+          error instanceof Error
+            ? error.message
+            : '파일 처리 중 오류가 발생했습니다.',
+        );
+      } finally {
+        // 리스트 추가가 끝나면 로딩 종료
+        // setIsAppUploading(false);
+      }
     },
     [validateAndAddAudio],
   );
@@ -431,6 +545,10 @@ export default function VoiceCloningPage() {
         void handleWebViewRecordingResult(parsed as VoiceCloningWebViewMessage);
         return;
       }
+      if (type === 'VOICE_CLONING_UPLOAD_RESULT') {
+        void handleWebViewUploadResult(parsed as VoiceCloningWebViewMessage);
+        return;
+      }
       if (type === 'VOICE_CLONING_RECORDING_ERROR') {
         const message =
           (parsed as { payload?: { message?: string } }).payload?.message ||
@@ -438,6 +556,12 @@ export default function VoiceCloningPage() {
         alert(message);
         setIsRecording(false);
         setRecordingTime(0);
+      }
+      if (type === 'VOICE_CLONING_UPLOAD_ERROR') {
+        const message =
+          (parsed as { payload?: { message?: string } }).payload?.message ||
+          '업로드에 실패했습니다.';
+        alert(message);
       }
     };
 
@@ -447,7 +571,19 @@ export default function VoiceCloningPage() {
       window.removeEventListener('message', handler);
       document.removeEventListener('message' as never, handler as never);
     };
-  }, [handleWebViewRecordingResult]);
+  }, [handleWebViewRecordingResult, handleWebViewUploadResult]);
+
+  useEffect(() => {
+    console.log('isAppUploading', isAppUploading);
+  }, [isAppUploading]);
+
+  const onClickUpload = useCallback(() => {
+    if (isRnWebView) {
+      postToReactNativeWebView({ type: 'VOICE_CLONING_UPLOAD_PICK' });
+      return;
+    }
+    fileInputRef.current?.click();
+  }, [isRnWebView]);
 
   // --- 마이크 녹음 시작/중단 로직 ---
   const startRecording = async () => {
@@ -591,13 +727,16 @@ export default function VoiceCloningPage() {
   const isDisabled = totalDuration < 10 || isRecording;
 
   return (
-    <div className="max-w-5xl mx-auto p-4 bg-[#F9FAFB] font-sans sm:p-6 lg:p-10">
+    <div className="max-w-5xl p-4 bg-[#F9FAFB] font-sans sm:p-6 lg:p-10">
       {createModelMutation.isPending && (
         <AudioLoading>
           <div className="text-lg font-semibold text-zinc-900">
             보이스 생성 중...
           </div>
         </AudioLoading>
+      )}
+      {isAppUploading && (
+        <AudioLoading src={uploadingAnimation} style={{ width: '50%' }} />
       )}
       {successModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6">
@@ -653,7 +792,7 @@ export default function VoiceCloningPage() {
 
       <div className="grid grid-cols-12 gap-8">
         <aside className="col-span-12 md:col-span-3">
-          <div className="space-y-6 text-sm">
+          <div className="space-y-3 md:space-y-6 text-sm">
             <button
               type="button"
               onClick={() => setStep(1)}
@@ -753,7 +892,7 @@ export default function VoiceCloningPage() {
                     </button>
                   </div>
                 ) : (
-                  <div className="w-full flex-1 p-12 flex flex-col items-center text-center min-h-[400px] justify-center">
+                  <div className="w-full flex-1 p-6 sm:p-12 flex flex-col items-center text-center min-h-[400px] justify-center">
                     <h2 className="text-xl font-bold text-zinc-800">
                       오디오 파일을 추가하거나 삭제하세요
                     </h2>
@@ -781,11 +920,16 @@ export default function VoiceCloningPage() {
                       <input
                         type="file"
                         multiple
-                        accept="audio/*"
+                        // accept="audio/*"
+                        accept=".mp3, .wav, .m4a, .flac, .mp4, .mov, .webm, .weba, .opus, .mid, audio/*, video/*"
+                        ref={fileInputRef}
                         onChange={async e => {
-                          if (e.target.files) {
-                            for (const file of Array.from(e.target.files))
-                              await validateAndAddAudio(file);
+                          try {
+                            if (e.target.files) {
+                              for (const file of Array.from(e.target.files))
+                                await validateAndAddAudio(file);
+                            }
+                          } finally {
                             e.target.value = '';
                           }
                         }}
@@ -793,8 +937,9 @@ export default function VoiceCloningPage() {
                         id="file-upload"
                       />
 
-                      <label
-                        htmlFor="file-upload"
+                      <button
+                        type="button"
+                        onClick={onClickUpload}
                         className="flex items-center gap-2 bg-[#F3F4F6] text-zinc-800 px-5 py-2 rounded-xl font-semibold cursor-pointer hover:bg-zinc-200 transition"
                       >
                         <svg
@@ -812,7 +957,7 @@ export default function VoiceCloningPage() {
                           <path d="M12 3v12" />
                         </svg>
                         업로드
-                      </label>
+                      </button>
 
                       <button
                         onClick={startRecording}
