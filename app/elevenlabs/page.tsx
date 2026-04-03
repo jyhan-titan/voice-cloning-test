@@ -37,7 +37,6 @@ export default function AudioBookGeneratorPage() {
       let localCompleted = 0;
       for (let i = 0; i < tasks.length; i++) {
         const task = tasks[i];
-        setStatus(`문단 생성 중... (${i + 1}/${tasks.length})`);
         const response = await fetch('/api/eleven-labs-tts', {
           method: 'POST',
           headers: {

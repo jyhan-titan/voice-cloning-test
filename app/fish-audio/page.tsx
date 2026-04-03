@@ -26,7 +26,6 @@ export default function FishAudioPage() {
       let localCompleted = 0;
       for (let i = 0; i < tasks.length; i++) {
         const task = tasks[i];
-        setStatus(`문단 생성 중... (${i + 1}/${tasks.length})`);
         const response = await fetch('/api/fish-audio-tts', {
           method: 'POST',
           headers: {

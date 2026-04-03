@@ -368,11 +368,10 @@ function CreateAudiobookPageInner() {
       setPhase('generating');
       const chunks: Uint8Array[] = [];
       let localCompleted = 0;
-      setStatus(`문단을 생성 중...`);
+      setStatus(`문단 생성 중...`);
 
       for (let i = 0; i < tasks.length; i += 1) {
         const task = tasks[i];
-        setStatus(`문단 생성 중... (${i + 1}/${tasks.length})`);
         const response = await fetch('/api/fish-audio-tts', {
           method: 'POST',
           headers: {
@@ -624,7 +623,12 @@ function CreateAudiobookPageInner() {
                 didUserScrollVoicesRef.current = true;
               }}
             >
-              {voiceModalItems.length === 0 ? (
+              {phase === 'fetching_voices' && voiceModalItems.length === 0 ? (
+                <div className="p-6 text-sm text-zinc-600 flex flex-col items-center justify-center gap-2">
+                  <span className="text-2xl animate-spin">⏳</span>
+                  <span>불러오는 중...</span>
+                </div>
+              ) : voiceModalItems.length === 0 ? (
                 <div className="p-4 text-sm text-zinc-500">
                   검색 결과가 없습니다.
                 </div>
