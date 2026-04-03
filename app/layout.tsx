@@ -25,6 +25,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({
@@ -39,12 +40,12 @@ export default function RootLayout({
     >
       <body
         suppressHydrationWarning
-        className="h-screen overflow-hidden flex flex-col lg:flex-row"
+        className="h-[100dvh] overflow-hidden flex flex-col lg:flex-row"
       >
         <QueryProvider>
           <MobileDrawerNav />
           <DesktopSidebar />
-          <main className="flex-1 min-w-0 bg-zinc-50 overflow-y-auto">
+          <main className="flex-1 min-w-0 bg-zinc-50 overflow-y-auto pb-[env(safe-area-inset-bottom)]">
             {children}
           </main>
         </QueryProvider>
