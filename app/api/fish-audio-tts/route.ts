@@ -43,7 +43,11 @@ export async function POST(req: NextRequest) {
       const errorText =
         upstreamRes.data instanceof ArrayBuffer
           ? new TextDecoder().decode(new Uint8Array(upstreamRes.data))
-          : String(upstreamRes.data ?? '');
+          : Buffer.isBuffer(upstreamRes.data)
+            ? upstreamRes.data.toString('utf8')
+            : upstreamRes.data instanceof Uint8Array
+              ? new TextDecoder().decode(upstreamRes.data)
+              : String(upstreamRes.data ?? '');
       return NextResponse.json(
         { error: errorText },
         { status: upstreamRes.status },
@@ -53,9 +57,24 @@ export async function POST(req: NextRequest) {
     const mp3Bytes =
       upstreamRes.data instanceof ArrayBuffer
         ? new Uint8Array(upstreamRes.data)
-        : new Uint8Array();
+        : Buffer.isBuffer(upstreamRes.data)
+          ? new Uint8Array(upstreamRes.data)
+          : upstreamRes.data instanceof Uint8Array
+            ? upstreamRes.data
+            : typeof upstreamRes.data === 'string'
+              ? new TextEncoder().encode(upstreamRes.data)
+              : new Uint8Array();
 
-    return new NextResponse(mp3Bytes, {
+    if (mp3Bytes.byteLength <= 0) {
+      return NextResponse.json(
+        { error: 'TTS 응답이 비어있습니다.' },
+        { status: 502 },
+      );
+    }
+
+    const body = Buffer.from(mp3Bytes);
+
+    return new NextResponse(body, {
       headers: {
         'Content-Type': 'audio/mpeg',
       },

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Breadcrumbs from '@/src/components/navigation/Breadcrumbs';
 
@@ -8,6 +8,15 @@ export default function AudiobookDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const id = params?.id;
+
+  const removeTempAudio = useCallback(() => {
+    if (!id) return;
+    try {
+      sessionStorage.removeItem(`audiobook_audio_${id}`);
+    } catch {
+      // ignore
+    }
+  }, [id]);
 
   const [audioUrl] = useState<string | null>(() => {
     if (!id) return null;
@@ -18,6 +27,18 @@ export default function AudiobookDetailPage() {
       return null;
     }
   });
+
+  useEffect(() => {
+    const onPageHide = () => removeTempAudio();
+    const onBeforeUnload = () => removeTempAudio();
+    window.addEventListener('pagehide', onPageHide);
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => {
+      window.removeEventListener('pagehide', onPageHide);
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      removeTempAudio();
+    };
+  }, [removeTempAudio]);
 
   const errorMessage = useMemo(() => {
     if (!id) return null;
@@ -44,7 +65,10 @@ export default function AudiobookDetailPage() {
         </div>
         <button
           type="button"
-          onClick={() => router.push('/audiobooks')}
+          onClick={() => {
+            removeTempAudio();
+            router.push('/audiobooks');
+          }}
           className="px-4 py-2.5 rounded-2xl border border-zinc-200 bg-white text-sm font-bold text-zinc-800 hover:bg-zinc-50"
         >
           목록

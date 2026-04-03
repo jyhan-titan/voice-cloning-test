@@ -389,14 +389,11 @@ function CreateAudiobookPageInner() {
           throw new Error(errText || 'TTS API 호출 실패');
         }
 
-        const reader = response.body?.getReader();
-        if (reader) {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            if (value) chunks.push(value);
-          }
+        const buf = await response.arrayBuffer();
+        if (buf.byteLength <= 0) {
+          throw new Error('TTS 응답이 비어있습니다.');
         }
+        chunks.push(new Uint8Array(buf));
 
         localCompleted += 1;
         setCompletedCount(localCompleted);
@@ -407,6 +404,10 @@ function CreateAudiobookPageInner() {
       const finalBlob = new Blob(chunks as unknown as BlobPart[], {
         type: 'audio/mpeg',
       });
+
+      if (finalBlob.size <= 0) {
+        throw new Error('생성된 오디오가 비어있습니다.');
+      }
 
       setPhase('saving');
       setStatus('저장 요청 중...');
