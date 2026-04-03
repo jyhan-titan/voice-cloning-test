@@ -3,6 +3,7 @@ import { BLOG_TEXT } from '@/src/constants/text_contents/blog_text';
 import { NEWS_TEXT } from '@/src/constants/text_contents/news_text';
 import { TiptapNode } from '@/src/utils/voice';
 import { apiFetch } from './fetcher';
+import { SHORT_TEXT } from '../constants/text_contents/short_text';
 
 export type ContentItem = {
   id: string;
@@ -36,6 +37,12 @@ let CONTENTS: ContentItem[] = [
     id: '789',
     title: '지친 나를 위한 작은 선물: 주말 숲 산책 가이드',
     nodes: BLOG_TEXT,
+    isAudiobook: false,
+  },
+  {
+    id: '000',
+    title: '테스트: tts API 테스트',
+    nodes: SHORT_TEXT,
     isAudiobook: false,
   },
 ];

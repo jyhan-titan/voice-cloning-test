@@ -1,19 +1,21 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { SidebarNav } from '@/src/components/layout/SidebarNav';
 
 export function DesktopSidebar() {
-  const [collapsed, setCollapsed] = useState(() => {
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
     try {
       const saved = localStorage.getItem('sidebar_collapsed');
-      return saved === '1';
+      queueMicrotask(() => setCollapsed(saved === '1'));
     } catch {
-      return false;
+      // ignore
     }
-  });
+  }, []);
 
   const toggle = () => {
     setCollapsed(prev => {
@@ -29,7 +31,8 @@ export function DesktopSidebar() {
 
   return (
     <aside
-      className={`hidden lg:flex shrink-0 border-r border-zinc-200 bg-zinc-800 flex-col transition-[width] duration-200 ${
+      suppressHydrationWarning
+      className={`hidden lg:flex shrink-0 border-r border-zinc-200 bg-zinc-800 flex-col transition-[width] duration-200 sticky top-0 h-screen overflow-y-auto ${
         collapsed ? 'w-16' : 'w-64'
       }`}
     >

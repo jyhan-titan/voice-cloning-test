@@ -34,6 +34,13 @@ export default function Home() {
             <span className="font-semibold">보이스 관리</span>에서 나만의
             보이스를 만들어보세요.
           </div>
+          <br />
+          <div className="mt-2 text-sm text-zinc-600">
+            * 실제 오디오 저장 API 구축이 필요합니다.
+          </div>
+          <div className="mt-2 text-sm text-zinc-600">
+            * 생성된 오디오북은 수정이 불가능합니다.
+          </div>
         </div>
       </div>
     </div>
