@@ -595,19 +595,41 @@ export default function VoiceCloningPage() {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream);
+
+      const preferredMimeTypes = [
+        'audio/mp4',
+        'audio/webm;codecs=opus',
+        'audio/webm',
+      ];
+      const selectedMimeType = preferredMimeTypes.find(t =>
+        typeof MediaRecorder !== 'undefined' &&
+        typeof MediaRecorder.isTypeSupported === 'function'
+          ? MediaRecorder.isTypeSupported(t)
+          : false,
+      );
+
+      mediaRecorderRef.current = selectedMimeType
+        ? new MediaRecorder(stream, { mimeType: selectedMimeType })
+        : new MediaRecorder(stream);
       audioChunksRef.current = [];
 
       mediaRecorderRef.current.ondataavailable = e =>
         audioChunksRef.current.push(e.data);
       mediaRecorderRef.current.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, {
-          type: 'audio/wav',
-        });
+        const recorderMimeType = mediaRecorderRef.current?.mimeType;
+        const chunkMimeType = audioChunksRef.current[0]?.type;
+        const mimeType = recorderMimeType || chunkMimeType || 'audio/webm';
+        const ext = mimeType.includes('mp4')
+          ? 'm4a'
+          : mimeType.includes('webm')
+            ? 'webm'
+            : 'dat';
+
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         const recordedFile = new File(
           [audioBlob],
-          `recording_${Date.now()}.wav`,
-          { type: 'audio/wav' },
+          `recording_${Date.now()}.${ext}`,
+          { type: mimeType },
         );
         await validateAndAddAudio(recordedFile);
         stream.getTracks().forEach(track => track.stop());
