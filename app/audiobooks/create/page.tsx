@@ -1,6 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { createAudiobook } from '@/src/api/audiobook';
@@ -35,7 +42,7 @@ type Phase =
   | 'done'
   | 'error';
 
-export default function CreateAudiobookPage() {
+function CreateAudiobookPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialContentId = searchParams.get('contentId') ?? '';
@@ -698,5 +705,13 @@ export default function CreateAudiobookPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function CreateAudiobookPage() {
+  return (
+    <Suspense fallback={null}>
+      <CreateAudiobookPageInner />
+    </Suspense>
   );
 }
