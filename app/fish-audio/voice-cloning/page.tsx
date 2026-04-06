@@ -673,13 +673,30 @@ export default function VoiceCloningPage() {
         body: formData,
       });
 
-      const data = (await res.json()) as unknown;
+      const contentType = res.headers.get('content-type') ?? '';
+      const rawText = contentType.includes('application/json')
+        ? null
+        : await res.text().catch(() => '');
+      const data = contentType.includes('application/json')
+        ? ((await res.json().catch(() => null)) as unknown)
+        : rawText;
+
       if (!res.ok) {
         const getStringField = (obj: unknown, key: string) => {
           if (!obj || typeof obj !== 'object') return undefined;
           const value = (obj as Record<string, unknown>)[key];
           return typeof value === 'string' ? value : undefined;
         };
+
+        if (typeof data === 'string') {
+          const trimmed = data.trim();
+          if (trimmed.startsWith('Request Entity Too Large')) {
+            throw new Error(
+              '파일이 너무 큽니다. 더 작은 파일로 다시 시도해주세요.',
+            );
+          }
+          throw new Error(trimmed || res.statusText || '생성 실패');
+        }
 
         const errorMessage = Array.isArray(data)
           ? (() => {
@@ -690,7 +707,13 @@ export default function VoiceCloningPage() {
           : getStringField(data, 'message');
 
         const errorFallback = getStringField(data, 'error');
-        throw new Error(errorMessage || errorFallback || '생성 실패');
+        throw new Error(
+          errorMessage || errorFallback || res.statusText || '생성 실패',
+        );
+      }
+
+      if (!data || typeof data !== 'object') {
+        throw new Error('서버 응답 형식이 올바르지 않습니다.');
       }
 
       return data as { _id?: string; id?: string } & Record<string, unknown>;
